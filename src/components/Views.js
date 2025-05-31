@@ -28,14 +28,21 @@ export const renderProjects = (portfolioData) => {
     <div class="container">
       <!-- These filter buttons are automatically generated! -->
       <!-- To add new filters, just add new category names in src/data/projects.js -->
-      <div class="project-filters fade-in-up">
-        ${categories.map(category => 
-          `<button class="filter-btn ${category === 'All' ? 'active' : ''}" data-category="${category}">
-            ${category}
-          </button>`
-        ).join('')}
+      <div class="project-filters-container fade-in-up">
+        <div class="project-filters">
+          ${categories.map(category => 
+            `<button class="filter-btn ${category === 'All' ? 'active' : ''}" data-category="${category}">
+              ${category}
+            </button>`
+          ).join('')}
+        </div>
         <button class="filter-reset" onclick="resetFilters()" style="display: none;" title="Clear all filters and show all projects">
-          ↺ Reset
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/>
+            <path d="M19 13l-1.5 1.5L19 16l1.5-1.5z"/>
+            <circle cx="18.5" cy="14.5" r="0.5"/>
+            <line x1="16" y1="12" x2="20" y2="16" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
         </button>
       </div>
       <div class="projects-grid fade-in-up">
