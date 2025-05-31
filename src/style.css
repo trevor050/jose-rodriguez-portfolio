@@ -121,32 +121,6 @@ body[data-theme="light"]::after {
   position: relative;
 }
 
-.header::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100px;
-  height: 3px;
-  background: linear-gradient(90deg, var(--primary), var(--secondary));
-  border-radius: 2px;
-  opacity: 0.8;
-}
-
-/* Additional decorative lines for symmetry */
-.header::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 2rem;
-  width: 60px;
-  height: 3px;
-  background: linear-gradient(90deg, var(--secondary), var(--accent));
-  border-radius: 2px;
-  opacity: 0.6;
-}
-
 .header-top {
   display: flex;
   justify-content: space-between;
@@ -299,6 +273,35 @@ body[data-theme="light"] .filter-btn {
 .filter-btn:focus {
   outline: 2px solid var(--primary);
   outline-offset: 1px; /* Reduced offset to stay within margin */
+}
+
+/* Reset filter button styles */
+.filter-reset {
+  padding: 0.7rem 1.4rem;
+  margin: 0.2rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  border-radius: 20px;
+  color: #ef4444;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.filter-reset:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #dc2626;
+  color: #dc2626;
+  transform: translateY(-1px);
+}
+
+.filter-reset:focus {
+  outline: 2px solid #ef4444;
+  outline-offset: 1px;
 }
 
 /* Projects Grid */
@@ -1037,12 +1040,6 @@ body[data-theme="light"] .skill-bar {
   
   .header {
     padding: 2rem 0 1.5rem;
-  }
-  
-  /* FIXED: Remove decorative lines on mobile - they look funky */
-  .header::before,
-  .header::after {
-    display: none;
   }
   
   .header-top {

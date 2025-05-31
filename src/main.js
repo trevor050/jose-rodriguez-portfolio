@@ -46,7 +46,7 @@ const portfolioData = {
 // Application state
 let currentView = 'projects'
 let isDarkMode = true
-let currentFilter = 'All'
+let currentFilters = ['All'] // Changed to array for multi-select
 
 /*
 ===========================================
@@ -147,29 +147,61 @@ const handleScroll = () => {
 
 /*
 ===========================================
-    AUTOMATIC FILTER FUNCTIONALITY
+    MULTI-SELECT FILTER FUNCTIONALITY
 ===========================================
 
-This handles filtering projects by category. The categories
-are automatically detected from your project data, so you 
-never need to manually update this code!
+This handles multi-select filtering with a reset button.
+Users can select multiple categories or reset to view all.
 */
 const filterProjects = (category) => {
-  currentFilter = category
   const projectCards = document.querySelectorAll('.project-card')
   const filterButtons = document.querySelectorAll('.filter-btn')
+  const resetButton = document.querySelector('.filter-reset')
   
-  // Update active filter button
+  // Handle multi-select logic
+  if (category === 'All') {
+    currentFilters = ['All']
+  } else {
+    // Remove 'All' if selecting specific categories
+    if (currentFilters.includes('All')) {
+      currentFilters = []
+    }
+    
+    // Toggle the selected category
+    if (currentFilters.includes(category)) {
+      currentFilters = currentFilters.filter(f => f !== category)
+    } else {
+      currentFilters.push(category)
+    }
+    
+    // If no filters selected, default to 'All'
+    if (currentFilters.length === 0) {
+      currentFilters = ['All']
+    }
+  }
+  
+  // Update active filter buttons
   filterButtons.forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.category === category)
+    const btnCategory = btn.dataset.category
+    btn.classList.toggle('active', 
+      currentFilters.includes(btnCategory) || 
+      (currentFilters.includes('All') && btnCategory === 'All')
+    )
   })
+  
+  // Show/hide reset button
+  if (resetButton) {
+    resetButton.style.display = currentFilters.includes('All') ? 'none' : 'inline-flex'
+  }
   
   // Filter project cards with faster animation
   projectCards.forEach(card => {
     card.classList.add('filtering')
     const projectCategory = card.dataset.category || 'All'
     
-    if (category === 'All' || projectCategory === category) {
+    const shouldShow = currentFilters.includes('All') || currentFilters.includes(projectCategory)
+    
+    if (shouldShow) {
       setTimeout(() => {
         card.classList.remove('hidden')
         card.classList.remove('filtering')
@@ -181,6 +213,11 @@ const filterProjects = (category) => {
       }, 300) // Faster hiding
     }
   })
+}
+
+// Reset filters function
+const resetFilters = () => {
+  filterProjects('All')
 }
 
 // Enhanced keyboard navigation
@@ -228,13 +265,17 @@ const isMobile = () => {
 // Show loading indicator
 const showLoading = () => {
   const loading = document.getElementById('loading-indicator')
-  loading.classList.remove('hidden')
+  if (loading) {
+    loading.classList.remove('hidden')
+  }
 }
 
 // Hide loading indicator
 const hideLoading = () => {
   const loading = document.getElementById('loading-indicator')
-  loading.classList.add('hidden')
+  if (loading) {
+    loading.classList.add('hidden')
+  }
 }
 
 // Theme toggle functionality
@@ -285,16 +326,24 @@ const renderHeader = () => {
   `
 }
 
-// Navigation handler with faster loading states
+// Navigation handler with FIXED mobile content loading
 const handleNavigation = (view) => {
   if (view === currentView) return
   
-  showLoading()
+  // Don't show loading on mobile to prevent content appearing below fold
+  if (!isMobile()) {
+    showLoading()
+  }
+  
+  const transitionTime = isMobile() ? 50 : 100 // Faster on mobile
   
   setTimeout(() => {
     currentView = view
     renderApp()
-    hideLoading()
+    
+    if (!isMobile()) {
+      hideLoading()
+    }
     
     // Scroll to top on navigation
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -310,7 +359,7 @@ const handleNavigation = (view) => {
     setTimeout(() => {
       document.body.removeChild(announcement)
     }, 1000)
-  }, 100) // Faster loading transition
+  }, transitionTime)
 }
 
 // Project interactions
@@ -549,8 +598,9 @@ const enhanceProjectCard = (card, project) => {
   card.dataset.category = project.category
 }
 
-// Make toggleTheme available globally
+// Make functions available globally
 window.toggleTheme = toggleTheme
+window.resetFilters = resetFilters
 
 // Enhanced render function with mobile-friendly footer
 const renderApp = () => {
@@ -634,13 +684,19 @@ const addEventListeners = () => {
     }
   })
   
-  // Project filters - AUTOMATIC GENERATION!
+  // Project filters - Multi-select functionality
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const category = e.target.dataset.category
       filterProjects(category)
     })
   })
+  
+  // Reset filters button
+  const resetButton = document.querySelector('.filter-reset')
+  if (resetButton) {
+    resetButton.addEventListener('click', resetFilters)
+  }
   
   // Contact form
   const contactForm = document.getElementById('contact-form')
