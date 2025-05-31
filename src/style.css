@@ -321,6 +321,8 @@ body[data-theme="light"] .filter-btn {
   grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 2rem;
   margin-bottom: 4rem;
+  justify-content: center; /* Center the grid when there are fewer items */
+  max-width: 100%;
 }
 
 /* Enhanced Project Cards with Better Image Handling */
@@ -334,6 +336,9 @@ body[data-theme="light"] .filter-btn {
   position: relative;
   backdrop-filter: blur(10px);
   transform-origin: center;
+  max-width: 450px; /* Prevent cards from getting too wide */
+  width: 100%; /* Ensure cards still fill their grid space normally */
+  justify-self: center; /* Center individual cards in their grid area */
 }
 
 body[data-theme="light"] .project-card {
