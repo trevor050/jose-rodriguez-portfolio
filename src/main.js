@@ -446,50 +446,53 @@ const validateContactForm = (data) => {
   return errors
 }
 
-// Backend API simulation (placeholder for future implementation)
+// Backend API - Formspree Integration (Replace YOUR_FORM_ID with actual ID)
 const submitContactForm = async (data) => {
-  // TODO: Replace with actual backend endpoint
-  // This is a placeholder structure for when you add a real backend
-  
   try {
-    // Simulate API call
-    const response = await fetch('/api/contact', {
+    // TODO: Replace 'YOUR_FORM_ID' with your actual Formspree form ID
+    // Get this from https://formspree.io after creating your form
+    const FORMSPREE_ENDPOINT = 'https://formspree.io/f/YOUR_FORM_ID'
+    
+    const response = await fetch(FORMSPREE_ENDPOINT, {
       method: 'POST',
       headers: {
+        'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
       },
       body: JSON.stringify({
         name: data.name.trim(),
         email: data.email.trim().toLowerCase(),
         subject: data.subject.trim(),
         message: data.message.trim(),
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        referrer: document.referrer || 'direct',
+        _replyto: data.email.trim().toLowerCase(), // Formspree reply-to field
+        _subject: `Portfolio Contact: ${data.subject.trim()}`, // Custom subject line
       })
     })
     
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    if (response.ok) {
+      return { success: true, message: 'Message sent successfully! I\'ll get back to you soon.' }
+    } else {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to send message')
     }
     
-    const result = await response.json()
-    return { success: true, data: result }
-    
   } catch (error) {
-    // For now, log the submission data (in production, this would go to your backend)
-    console.log('Contact Form Submission:', {
+    console.error('Contact form error:', error)
+    
+    // Fallback: Log the submission data for manual follow-up
+    console.log('📧 Contact Form Submission (for manual follow-up):', {
       name: data.name.trim(),
       email: data.email.trim().toLowerCase(),
       subject: data.subject.trim(),
       message: data.message.trim(),
       timestamp: new Date().toISOString(),
-      status: 'pending_backend_implementation'
+      status: 'failed_to_send'
     })
     
-    // Simulate successful submission for demo purposes
-    return { success: true, message: 'Form submitted successfully (demo mode)' }
+    return { 
+      success: false, 
+      message: 'Failed to send message. Please try again or reach out via LinkedIn.' 
+    }
   }
 }
 
