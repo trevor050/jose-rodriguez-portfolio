@@ -16,7 +16,7 @@ const portfolioData = {
       learnings: "Advanced spatial reasoning, mechanical system integration, precision engineering tolerances, and innovative material application",
       category: "Mechanical Systems",
       difficulty: "Advanced",
-      status: "Portfolio Ready"
+      status: "Completed"
     },
     {
       id: 2,
@@ -29,7 +29,7 @@ const portfolioData = {
       learnings: "Applied physics in engineering design, elastic energy systems, mechanical advantage principles, and safety-focused engineering",
       category: "Physics Application",
       difficulty: "Intermediate",
-      status: "Tested & Validated"
+      status: "Completed"
     },
     {
       id: 3,
@@ -42,7 +42,7 @@ const portfolioData = {
       learnings: "Human-centered design, structural load distribution, manufacturing optimization, and systems integration",
       category: "Structural Engineering",
       difficulty: "Expert",
-      status: "Design Complete"
+      status: "Completed"
     },
     {
       id: 4,
@@ -55,7 +55,7 @@ const portfolioData = {
       learnings: "Textile engineering principles, manufacturing efficiency, quality control processes, and material science applications",
       category: "Materials Engineering",
       difficulty: "Intermediate",
-      status: "Production Ready"
+      status: "Completed"
     },
     {
       id: 5,
@@ -68,7 +68,7 @@ const portfolioData = {
       learnings: "Mechanical advantage systems, user interface design, reliability engineering, and iterative prototyping",
       category: "Mechanical Design",
       difficulty: "Intermediate",
-      status: "Functional Prototype"
+      status: "Completed"
     },
     {
       id: 6,
@@ -81,7 +81,7 @@ const portfolioData = {
       learnings: "Control systems integration, renewable energy optimization, sensor feedback loops, and sustainable engineering practices",
       category: "Renewable Energy",
       difficulty: "Advanced",
-      status: "Testing Phase"
+      status: "Completed"
     },
     {
       id: 7,
@@ -94,7 +94,7 @@ const portfolioData = {
       learnings: "Hydraulic system design, pressure calculations, safety engineering, and educational tool development",
       category: "Fluid Mechanics",
       difficulty: "Advanced",
-      status: "Educational Ready"
+      status: "Completed"
     },
     {
       id: 8,
@@ -107,7 +107,7 @@ const portfolioData = {
       learnings: "Precision engineering, calibration techniques, mechanical sensitivity, and measurement system design",
       category: "Precision Instruments",
       difficulty: "Expert",
-      status: "Calibrated & Ready"
+      status: "Completed"
     }
   ],
   stats: {
