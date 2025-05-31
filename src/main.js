@@ -206,32 +206,201 @@ const closeProjectModal = () => {
   }
 }
 
-// Contact form handler
-const handleContactForm = (e) => {
+// Contact form validation
+const validateContactForm = (data) => {
+  const errors = []
+  
+  // Name validation
+  if (!data.name || data.name.trim().length < 2) {
+    errors.push('Name must be at least 2 characters long')
+  }
+  if (data.name && data.name.length > 100) {
+    errors.push('Name must be less than 100 characters')
+  }
+  
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!data.email || !emailRegex.test(data.email)) {
+    errors.push('Please enter a valid email address')
+  }
+  if (data.email && data.email.length > 254) {
+    errors.push('Email address is too long')
+  }
+  
+  // Subject validation
+  if (!data.subject || data.subject.trim().length < 3) {
+    errors.push('Subject must be at least 3 characters long')
+  }
+  if (data.subject && data.subject.length > 200) {
+    errors.push('Subject must be less than 200 characters')
+  }
+  
+  // Message validation
+  if (!data.message || data.message.trim().length < 10) {
+    errors.push('Message must be at least 10 characters long')
+  }
+  if (data.message && data.message.length > 2000) {
+    errors.push('Message must be less than 2000 characters')
+  }
+  
+  // Check for potential spam patterns
+  const spamPatterns = [
+    /(?:https?:\/\/|www\.)[^\s]+/gi, // URLs
+    /\b(?:buy|sell|money|free|click|offer|deal|limited|urgent)\b/gi, // Spam keywords
+    /(.)\1{4,}/gi, // Repeated characters (aaaaa)
+  ]
+  
+  const allText = (data.name + ' ' + data.subject + ' ' + data.message).toLowerCase()
+  spamPatterns.forEach(pattern => {
+    if (pattern.test(allText)) {
+      errors.push('Message appears to contain inappropriate content')
+    }
+  })
+  
+  return errors
+}
+
+// Backend API simulation (placeholder for future implementation)
+const submitContactForm = async (data) => {
+  // TODO: Replace with actual backend endpoint
+  // This is a placeholder structure for when you add a real backend
+  
+  try {
+    // Simulate API call
+    const response = await fetch('/api/contact', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({
+        name: data.name.trim(),
+        email: data.email.trim().toLowerCase(),
+        subject: data.subject.trim(),
+        message: data.message.trim(),
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        referrer: document.referrer || 'direct',
+      })
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const result = await response.json()
+    return { success: true, data: result }
+    
+  } catch (error) {
+    // For now, log the submission data (in production, this would go to your backend)
+    console.log('Contact Form Submission:', {
+      name: data.name.trim(),
+      email: data.email.trim().toLowerCase(),
+      subject: data.subject.trim(),
+      message: data.message.trim(),
+      timestamp: new Date().toISOString(),
+      status: 'pending_backend_implementation'
+    })
+    
+    // Simulate successful submission for demo purposes
+    return { success: true, message: 'Form submitted successfully (demo mode)' }
+  }
+}
+
+// Enhanced contact form handler
+const handleContactForm = async (e) => {
   e.preventDefault()
   
   const formData = new FormData(e.target)
   const data = Object.fromEntries(formData)
   
+  // Validate form data
+  const validationErrors = validateContactForm(data)
+  if (validationErrors.length > 0) {
+    showFormErrors(validationErrors)
+    return
+  }
+  
   const btn = e.target.querySelector('.btn')
   const originalText = btn.innerHTML
   
+  // Show loading state
   btn.innerHTML = '<span>Sending...</span>'
   btn.disabled = true
+  clearFormErrors()
   
-  setTimeout(() => {
-    btn.innerHTML = '<span>Message Sent Successfully</span>'
-    btn.style.background = 'var(--accent)'
+  try {
+    // Submit form data
+    const result = await submitContactForm(data)
     
+    if (result.success) {
+      // Show success state
+      btn.innerHTML = '<span>Message Sent Successfully!</span>'
+      btn.style.background = 'var(--accent)'
+      
+      // Reset form after delay
+      setTimeout(() => {
+        btn.innerHTML = originalText
+        btn.disabled = false
+        btn.style.background = 'var(--primary)'
+        e.target.reset()
+      }, 3000)
+      
+    } else {
+      throw new Error(result.message || 'Failed to send message')
+    }
+    
+  } catch (error) {
+    console.error('Contact form error:', error)
+    
+    // Show error state
+    btn.innerHTML = '<span>Failed to Send - Try Again</span>'
+    btn.style.background = '#ef4444'
+    
+    // Reset button after delay
     setTimeout(() => {
       btn.innerHTML = originalText
       btn.disabled = false
       btn.style.background = 'var(--primary)'
-      e.target.reset()
-    }, 2500)
-  }, 1200)
+    }, 3000)
+    
+    showFormErrors(['Failed to send message. Please try again or contact directly via LinkedIn.'])
+  }
+}
+
+// Form error display functions
+const showFormErrors = (errors) => {
+  clearFormErrors()
   
-  console.log('Contact form submission:', data)
+  const form = document.getElementById('contact-form')
+  if (!form) return
+  
+  const errorContainer = document.createElement('div')
+  errorContainer.id = 'form-errors'
+  errorContainer.style.cssText = `
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid #ef4444;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    color: #ef4444;
+  `
+  
+  errors.forEach(error => {
+    const errorElement = document.createElement('p')
+    errorElement.textContent = error
+    errorElement.style.margin = '0.25rem 0'
+    errorContainer.appendChild(errorElement)
+  })
+  
+  form.insertBefore(errorContainer, form.firstChild)
+}
+
+const clearFormErrors = () => {
+  const existingErrors = document.getElementById('form-errors')
+  if (existingErrors) {
+    existingErrors.remove()
+  }
 }
 
 // Make toggleTheme available globally

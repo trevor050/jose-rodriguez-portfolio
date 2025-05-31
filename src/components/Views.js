@@ -94,23 +94,61 @@ export const renderContact = () => {
         
         <form class="contact-form" id="contact-form">
           <div class="form-group">
-            <label for="name">Name</label>
-            <input type="text" id="name" name="name" required placeholder="Your full name">
+            <label for="name">Name *</label>
+            <input 
+              type="text" 
+              id="name" 
+              name="name" 
+              required 
+              minlength="2"
+              maxlength="100"
+              pattern="^[a-zA-Z\s\-\.\']+$"
+              title="Please enter a valid name (letters, spaces, hyphens, apostrophes only)"
+              placeholder="Your full name"
+              autocomplete="name"
+            >
           </div>
           
           <div class="form-group">
-            <label for="email">Email Address</label>
-            <input type="email" id="email" name="email" required placeholder="your.email@domain.com">
+            <label for="email">Email Address *</label>
+            <input 
+              type="email" 
+              id="email" 
+              name="email" 
+              required 
+              maxlength="254"
+              pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+              title="Please enter a valid email address"
+              placeholder="your.email@domain.com"
+              autocomplete="email"
+            >
           </div>
           
           <div class="form-group">
-            <label for="subject">Subject</label>
-            <input type="text" id="subject" name="subject" required placeholder="Purpose of your message">
+            <label for="subject">Subject *</label>
+            <input 
+              type="text" 
+              id="subject" 
+              name="subject" 
+              required 
+              minlength="3"
+              maxlength="200"
+              placeholder="Purpose of your message"
+              autocomplete="off"
+            >
           </div>
           
           <div class="form-group">
-            <label for="message">Message</label>
-            <textarea id="message" name="message" required placeholder="Please share details about your inquiry, project ideas, collaboration opportunities, or any questions you may have. I look forward to hearing from you."></textarea>
+            <label for="message">Message *</label>
+            <textarea 
+              id="message" 
+              name="message" 
+              required 
+              minlength="10"
+              maxlength="2000"
+              rows="6"
+              placeholder="Please share details about your inquiry, project ideas, collaboration opportunities, or any questions you may have. I look forward to hearing from you."
+            ></textarea>
           </div>
           
           <div class="form-submit">
