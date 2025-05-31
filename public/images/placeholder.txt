@@ -1,0 +1,11 @@
+# Project Images
+
+This directory contains project images for Jose's portfolio.
+
+The following images should be added:
+- cardboard-engine.jpg - Photo of the cardboard 4-cylinder engine
+- crossbow.jpg - Photo of the rubber band crossbow
+- cardboard-armor.jpg - Photo of the cardboard armor set
+- jeans-project.jpg - Photo of the jeans sewing project
+
+For now, the site uses gradient placeholders with emoji for missing images. 
