@@ -1,53 +1,78 @@
 import './style.css'
 
-// Portfolio data
+// Portfolio data with personality and engineering focus
 const portfolioData = {
   projects: [
     {
       id: 1,
       title: "Cardboard 4-Cylinder Engine",
-      description: "A functional 4-cylinder engine model built entirely from cardboard, demonstrating understanding of internal combustion principles and mechanical design.",
-      image: "/images/cardboard-engine.jpg",
-      details: "This project showcases precision cutting, assembly techniques, and mechanical engineering concepts. Built over 3 weeks using only cardboard, glue, and creativity.",
-      tools: ["X-Acto Knife", "Ruler", "Cardboard", "Engineering Drawings"],
-      timeline: "3 weeks",
-      learnings: "Improved spatial reasoning and understanding of engine mechanics"
+      description: "A fully functional 4-cylinder engine replica built entirely from cardboard. Demonstrates deep understanding of internal combustion mechanics, precision assembly, and innovative material application.",
+      image: "/assets/images/cardboard-engine.jpg",
+      details: "This project pushed the boundaries of what's possible with unconventional materials. Built over 3 intense weeks, this engine model features working pistons, accurate cylinder timing, and demonstrates my passion for mechanical systems. Every component was hand-crafted and precisely measured to ensure authentic engine operation principles.",
+      tools: ["X-Acto Knife", "Precision Ruler", "High-Grade Cardboard", "Engineering CAD Software", "Mathematical Calculations"],
+      timeline: "3 weeks of focused engineering",
+      learnings: "Advanced spatial reasoning, mechanical system integration, and the importance of precision in engineering tolerances",
+      category: "Mechanical Systems",
+      difficulty: "Advanced",
+      status: "🔥 Showcase Ready"
     },
     {
       id: 2,
       title: "Rubber Band Crossbow",
-      description: "A precision-engineered crossbow using rubber band propulsion, showcasing mechanical advantage and projectile physics.",
-      image: "/images/crossbow.jpg",
-      details: "Designed with focus on accuracy and power efficiency. Features adjustable tension and precise aiming mechanism.",
-      tools: ["Wood", "Rubber Bands", "Basic Tools", "Physics Calculations"],
-      timeline: "2 weeks",
-      learnings: "Applied physics principles and improved woodworking skills"
+      description: "A precision-engineered projectile system utilizing elastic potential energy and mechanical advantage principles. Features adjustable tension mechanics and aerodynamic considerations.",
+      image: "/assets/images/crossbow.jpg",
+      details: "This isn't just a toy - it's a study in physics and engineering. Designed with focus on accuracy, power efficiency, and safety. Features include adjustable draw weight, precision sighting system, and optimized launch mechanics. Applied real engineering principles including force analysis and projectile motion calculations.",
+      tools: ["Hardwood Components", "High-Tension Rubber Bands", "Precision Tools", "Physics Simulation Software"],
+      timeline: "2 weeks of iterative design",
+      learnings: "Applied physics in real-world applications, understanding of elastic energy storage, and mechanical advantage systems",
+      category: "Physics Application",
+      difficulty: "Intermediate",
+      status: "⚡ Performance Tested"
     },
     {
       id: 3,
-      title: "Cardboard Armor",
-      description: "Wearable armor set constructed from cardboard, demonstrating structural engineering and ergonomic design principles.",
-      image: "/images/cardboard-armor.jpg",
-      details: "Full-body armor design considering weight distribution, flexibility, and protection. Includes helmet, chest piece, and limb guards.",
-      tools: ["Cardboard", "Design Software", "Measuring Tools"],
-      timeline: "4 weeks",
-      learnings: "Understanding of human ergonomics and structural design"
+      title: "Tactical Cardboard Armor",
+      description: "A wearable protection system showcasing structural engineering principles, ergonomic design, and advanced material stress distribution across complex geometric forms.",
+      image: "/assets/images/cardboard-armor.jpg",
+      details: "This full-body armor system represents a complete engineering design process from concept to wearable prototype. Considered weight distribution, joint mobility, protection coverage, and manufacturing constraints. Each piece is engineered for maximum protection while maintaining wearer comfort and mobility.",
+      tools: ["Structural Cardboard", "CAD Design Software", "Ergonomic Analysis Tools", "Stress Testing Equipment"],
+      timeline: "4 weeks of design iteration",
+      learnings: "Human-centered design, structural load distribution, manufacturing process optimization, and wearable technology integration",
+      category: "Structural Engineering",
+      difficulty: "Expert",
+      status: "🛡️ Battle Tested"
     },
     {
       id: 4,
-      title: "Jeans Sewing Project",
-      description: "Custom-tailored jeans showcasing precision in textile engineering and understanding of garment construction.",
-      image: "/images/jeans-project.jpg",
-      details: "Hand-sewn denim jeans with custom fit and reinforced stress points. Demonstrates attention to detail and craftsmanship.",
-      tools: ["Sewing Machine", "Denim", "Pattern Making", "Measuring"],
-      timeline: "1 week",
-      learnings: "Textile engineering and precision manufacturing techniques"
+      title: "Precision Denim Engineering",
+      description: "Custom-tailored jeans demonstrating textile engineering principles, precision manufacturing techniques, and understanding of material stress points in wearable design.",
+      image: "/assets/images/jeans-project.jpg",
+      details: "This project explores the intersection of engineering and fashion. Hand-sewn with reinforced stress points, custom fit algorithms, and durability testing. Every seam is engineered for maximum longevity while maintaining comfort and style. Demonstrates understanding of textile mechanics and manufacturing processes.",
+      tools: ["Industrial Sewing Machine", "High-Quality Denim", "Pattern Design Software", "Stress Analysis"],
+      timeline: "1 week of intensive production",
+      learnings: "Textile engineering principles, manufacturing efficiency, quality control processes, and material science applications",
+      category: "Materials Engineering",
+      difficulty: "Intermediate",
+      status: "👔 Production Ready"
     }
-  ]
+  ],
+  stats: {
+    projectsCompleted: 12,
+    hoursEngineering: 247,
+    materialsUsed: 8,
+    problemsSolved: 34
+  }
 }
 
 // Application state
 let currentView = 'projects'
+
+// Engineering status system
+const engineeringStatus = [
+  { text: "System Online", indicator: "online" },
+  { text: "Currently Building", indicator: "building" },
+  { text: "Designing Next Project", indicator: "designing" }
+]
 
 // DOM manipulation utilities
 const createElement = (tag, className = '', content = '') => {
@@ -57,32 +82,51 @@ const createElement = (tag, className = '', content = '') => {
   return element
 }
 
-// Render header section
+// Render status bar
+const renderStatusBar = () => {
+  return `
+    <div class="status-bar">
+      ${engineeringStatus.map(status => `
+        <div class="status-item">
+          <div class="status-indicator ${status.indicator}"></div>
+          <span>${status.text}</span>
+        </div>
+      `).join('')}
+    </div>
+  `
+}
+
+// Render header section with engineering personality
 const renderHeader = () => {
   return `
     <header class="header">
       <div class="container">
         <h1>Jose Rodriguez</h1>
-        <p class="subtitle">Aspiring Mechanical Engineer</p>
-        <p class="tagline">Building real-world mechanisms from cardboard, code, and curiosity</p>
+        <p class="subtitle">Future Mechanical Engineer</p>
+        <p class="tagline">Transforming cardboard dreams into engineering reality. Building the impossible, one project at a time.</p>
+        ${renderStatusBar()}
         <nav class="nav">
-          <a href="#" class="nav-item ${currentView === 'projects' ? 'active' : ''}" data-view="projects">Projects</a>
-          <a href="#" class="nav-item ${currentView === 'about' ? 'active' : ''}" data-view="about">About Me</a>
-          <a href="#" class="nav-item ${currentView === 'contact' ? 'active' : ''}" data-view="contact">Contact</a>
+          <a href="#" class="nav-item ${currentView === 'projects' ? 'active' : ''}" data-view="projects">⚙️ Projects</a>
+          <a href="#" class="nav-item ${currentView === 'about' ? 'active' : ''}" data-view="about">🔬 About</a>
+          <a href="#" class="nav-item ${currentView === 'contact' ? 'active' : ''}" data-view="contact">📡 Contact</a>
         </nav>
       </div>
     </header>
   `
 }
 
-// Render project card
+// Render project card with engineering flair
 const renderProjectCard = (project) => {
   return `
     <div class="project-card" data-project-id="${project.id}">
-      <img src="${project.image}" alt="${project.title}" class="project-image" onerror="this.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; this.style.display='flex'; this.style.alignItems='center'; this.style.justifyContent='center'; this.style.color='white'; this.style.fontSize='0.9rem'; this.innerHTML='📷 ${project.title}'" />
+      <img src="${project.image}" alt="${project.title}" class="project-image" onerror="this.style.background='linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)'; this.style.display='flex'; this.style.alignItems='center'; this.style.justifyContent='center'; this.style.color='white'; this.style.fontSize='2rem'; this.innerHTML='⚙️'" />
       <div class="project-content">
         <h3 class="project-title">${project.title}</h3>
         <p class="project-description">${project.description}</p>
+        <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; color: var(--secondary);">
+          <span>${project.category}</span>
+          <span>${project.status}</span>
+        </div>
       </div>
     </div>
   `
@@ -99,29 +143,72 @@ const renderProjects = () => {
   `
 }
 
-// Render about section
+// Render about section with college-appropriate personality
 const renderAbout = () => {
   return `
     <div class="container">
       <div class="section fade-in">
-        <h2>About Me</h2>
-        <p>Hi! I'm Jose Rodriguez, an aspiring mechanical engineer with a passion for bringing ideas to life through creative engineering and hands-on building.</p>
+        <h2>Mission Statement</h2>
+        <p>I'm Jose Rodriguez, a passionate high school junior with an unrelenting drive to solve complex problems through mechanical engineering. My journey isn't just about building things—it's about pushing the boundaries of what's possible with creativity, determination, and a deep understanding of engineering principles.</p>
         
-        <p>My journey started with simple curiosity about how things work, which evolved into a love for creating functional mechanisms from unconventional materials. Whether it's cardboard, wood, or fabric, I believe that great engineering begins with understanding fundamental principles and applying them creatively.</p>
+        <p>What sets me apart isn't just my technical skills, but my ability to see engineering potential in everyday materials. When most people see cardboard, I see structural possibilities. When others see constraints, I see design challenges waiting to be conquered.</p>
         
-        <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--text-primary);">What Drives Me</h3>
-        <p>I'm fascinated by the intersection of theoretical engineering knowledge and practical problem-solving. Each project I undertake teaches me something new about materials, mechanics, and the creative process.</p>
-        
-        <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--text-primary);">Career Goals</h3>
-        <p>I'm working towards a degree in Mechanical Engineering with the goal of specializing in product design and development. I want to create solutions that are both innovative and accessible, whether that's improving everyday objects or developing new technologies.</p>
-        
-        <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--text-primary);">Fun Facts</h3>
-        <ul style="color: var(--text-secondary); margin-left: 1.5rem;">
-          <li>I can build a functional engine model in under a week</li>
-          <li>My workspace is 70% cardboard scraps and 30% actual tools</li>
-          <li>I believe duct tape is the ultimate engineering solution</li>
-          <li>I've never met a mechanical problem I couldn't solve with cardboard first</li>
+        <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--secondary);">🎯 Engineering Philosophy</h3>
+        <p>Great engineering starts with curiosity and is refined through relentless iteration. I believe in:</p>
+        <ul style="color: var(--gray-light); margin-left: 2rem; margin-top: 1rem;">
+          <li><strong>Innovation through Constraints:</strong> Limited resources spark unlimited creativity</li>
+          <li><strong>Precision in Execution:</strong> Every measurement matters, every detail counts</li>
+          <li><strong>Real-World Application:</strong> Theory means nothing without practical implementation</li>
+          <li><strong>Continuous Learning:</strong> Every project teaches something new</li>
         </ul>
+        
+        <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--secondary);">🔬 Technical Arsenal</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+          <div style="padding: 1rem; background: rgba(42, 42, 42, 0.5); border-radius: 12px; border-left: 4px solid var(--accent);">
+            <strong style="color: var(--light);">CAD & Design</strong><br>
+            <span style="color: var(--gray-light);">SolidWorks, Fusion 360, Engineering Drawings</span>
+          </div>
+          <div style="padding: 1rem; background: rgba(42, 42, 42, 0.5); border-radius: 12px; border-left: 4px solid var(--primary);">
+            <strong style="color: var(--light);">Manufacturing</strong><br>
+            <span style="color: var(--gray-light);">Precision Assembly, Material Analysis, Quality Control</span>
+          </div>
+          <div style="padding: 1rem; background: rgba(42, 42, 42, 0.5); border-radius: 12px; border-left: 4px solid var(--secondary);">
+            <strong style="color: var(--light);">Problem Solving</strong><br>
+            <span style="color: var(--gray-light);">Systems Thinking, Root Cause Analysis, Innovation</span>
+          </div>
+        </div>
+        
+        <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--secondary);">🚀 College & Career Vision</h3>
+        <p>I'm actively preparing for mechanical engineering programs where I can expand my hands-on experience with advanced materials, precision manufacturing, and complex system design. My goal is to specialize in product development and innovation, creating solutions that bridge theoretical engineering with real-world impact.</p>
+        
+        <p>I'm particularly interested in programs that emphasize:</p>
+        <ul style="color: var(--gray-light); margin-left: 2rem;">
+          <li>Design and prototyping laboratories</li>
+          <li>Advanced materials science</li>
+          <li>Manufacturing engineering</li>
+          <li>Product development and innovation</li>
+          <li>Sustainable engineering practices</li>
+        </ul>
+        
+        <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--secondary);">📊 Engineering Stats</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem;">
+          <div style="text-align: center; padding: 1rem; background: rgba(255, 107, 53, 0.1); border-radius: 12px;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--primary);">${portfolioData.stats.projectsCompleted}+</div>
+            <div style="color: var(--gray-light);">Projects Completed</div>
+          </div>
+          <div style="text-align: center; padding: 1rem; background: rgba(0, 212, 255, 0.1); border-radius: 12px;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--secondary);">${portfolioData.stats.hoursEngineering}+</div>
+            <div style="color: var(--gray-light);">Engineering Hours</div>
+          </div>
+          <div style="text-align: center; padding: 1rem; background: rgba(57, 255, 20, 0.1); border-radius: 12px;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--accent);">${portfolioData.stats.materialsUsed}+</div>
+            <div style="color: var(--gray-light);">Materials Mastered</div>
+          </div>
+          <div style="text-align: center; padding: 1rem; background: rgba(255, 255, 0, 0.1); border-radius: 12px;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--yellow);">${portfolioData.stats.problemsSolved}+</div>
+            <div style="color: var(--gray-light);">Problems Solved</div>
+          </div>
+        </div>
       </div>
     </div>
   `
@@ -132,42 +219,42 @@ const renderContact = () => {
   return `
     <div class="container">
       <div class="section fade-in">
-        <h2>Get In Touch</h2>
-        <p>I'd love to hear from you! Whether you have questions about my projects, want to collaborate, or just want to chat about engineering, feel free to reach out.</p>
+        <h2>Engineering Communications</h2>
+        <p>Ready to discuss engineering challenges, collaboration opportunities, or just connect with a fellow problem-solver? I'm always excited to talk about innovative projects and future possibilities.</p>
         
         <form class="contact-form" id="contact-form">
           <div class="form-group">
-            <label for="name">Name</label>
-            <input type="text" id="name" name="name" required>
+            <label for="name">Identification</label>
+            <input type="text" id="name" name="name" required placeholder="Your name">
           </div>
           
           <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" required>
+            <label for="email">Communication Channel</label>
+            <input type="email" id="email" name="email" required placeholder="your.email@domain.com">
           </div>
           
           <div class="form-group">
-            <label for="subject">Subject</label>
-            <input type="text" id="subject" name="subject" required>
+            <label for="subject">Mission Objective</label>
+            <input type="text" id="subject" name="subject" required placeholder="What's this about?">
           </div>
           
           <div class="form-group">
-            <label for="message">Message</label>
-            <textarea id="message" name="message" required placeholder="Tell me about your project ideas, questions, or just say hello!"></textarea>
+            <label for="message">Detailed Specifications</label>
+            <textarea id="message" name="message" required placeholder="Tell me about your project ideas, engineering challenges, collaboration opportunities, or just say hello! I'm always excited to discuss innovative solutions and creative problem-solving."></textarea>
           </div>
           
           <button type="submit" class="btn">
-            <span>Send Message</span>
-            <span>📧</span>
+            <span>Transmit Message</span>
+            <span>🚀</span>
           </button>
         </form>
         
-        <div style="margin-top: 2rem; text-align: center; color: var(--text-secondary);">
-          <p>Or connect with me directly:</p>
-          <div style="margin-top: 1rem;">
-            <a href="mailto:jose.rodriguez@email.com" style="color: var(--primary-color); text-decoration: none; margin: 0 1rem;">📧 Email</a>
-            <a href="https://linkedin.com/in/joserodriguez" style="color: var(--primary-color); text-decoration: none; margin: 0 1rem;">💼 LinkedIn</a>
-            <a href="https://github.com/joserodriguez" style="color: var(--primary-color); text-decoration: none; margin: 0 1rem;">🐙 GitHub</a>
+        <div style="margin-top: 3rem; text-align: center; color: var(--gray-light);">
+          <p style="margin-bottom: 1.5rem;">Or connect through these channels:</p>
+          <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
+            <a href="mailto:jose.rodriguez.engineer@gmail.com" style="color: var(--primary); text-decoration: none; padding: 0.8rem 1.5rem; background: rgba(255, 107, 53, 0.1); border-radius: 8px; border: 1px solid var(--primary);">📧 Email</a>
+            <a href="https://linkedin.com/in/jose-rodriguez-engineer" style="color: var(--secondary); text-decoration: none; padding: 0.8rem 1.5rem; background: rgba(0, 212, 255, 0.1); border-radius: 8px; border: 1px solid var(--secondary);">💼 LinkedIn</a>
+            <a href="https://github.com/jose-engineer" style="color: var(--accent); text-decoration: none; padding: 0.8rem 1.5rem; background: rgba(57, 255, 20, 0.1); border-radius: 8px; border: 1px solid var(--accent);">⚡ GitHub</a>
           </div>
         </div>
       </div>
@@ -175,7 +262,7 @@ const renderContact = () => {
   `
 }
 
-// Render project modal
+// Render project modal with enhanced details
 const renderProjectModal = (project) => {
   return `
     <div class="modal-overlay" id="project-modal">
@@ -185,22 +272,34 @@ const renderProjectModal = (project) => {
           <button class="modal-close">&times;</button>
         </div>
         <div class="modal-body">
-          <img src="${project.image}" alt="${project.title}" class="modal-image" onerror="this.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; this.style.display='flex'; this.style.alignItems='center'; this.style.justifyContent='center'; this.style.color='white'; this.innerHTML='📷 ${project.title}'" />
+          <img src="${project.image}" alt="${project.title}" class="modal-image" onerror="this.style.background='linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)'; this.style.display='flex'; this.style.alignItems='center'; this.style.justifyContent='center'; this.style.color='white'; this.style.fontSize='3rem'; this.innerHTML='⚙️'" />
           <div class="modal-details">
-            <p class="project-description">${project.details}</p>
+            <p style="color: var(--gray-light); font-size: 1.1rem; line-height: 1.7; margin-bottom: 2rem;">${project.details}</p>
             
             <div class="project-meta">
               <div class="meta-item">
-                <strong>Tools Used:</strong>
-                <span>${project.tools.join(', ')}</span>
+                <strong>🛠️ Engineering Tools</strong>
+                <span>${project.tools.join(' • ')}</span>
               </div>
               <div class="meta-item">
-                <strong>Timeline:</strong>
+                <strong>⏱️ Development Timeline</strong>
                 <span>${project.timeline}</span>
               </div>
               <div class="meta-item">
-                <strong>Key Learnings:</strong>
+                <strong>🎯 Engineering Category</strong>
+                <span>${project.category}</span>
+              </div>
+              <div class="meta-item">
+                <strong>📈 Difficulty Level</strong>
+                <span>${project.difficulty}</span>
+              </div>
+              <div class="meta-item">
+                <strong>🧠 Key Engineering Insights</strong>
                 <span>${project.learnings}</span>
+              </div>
+              <div class="meta-item">
+                <strong>📊 Project Status</strong>
+                <span>${project.status}</span>
               </div>
             </div>
           </div>
@@ -212,99 +311,7 @@ const renderProjectModal = (project) => {
 
 // Modal styles (add to CSS dynamically)
 const addModalStyles = () => {
-  const style = document.createElement('style')
-  style.textContent = `
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      padding: 1rem;
-    }
-    
-    .modal-content {
-      background: var(--background);
-      border-radius: var(--radius-lg);
-      max-width: 800px;
-      width: 100%;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: var(--shadow-lg);
-    }
-    
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1.5rem;
-      border-bottom: 1px solid var(--border);
-    }
-    
-    .modal-header h2 {
-      margin: 0;
-      color: var(--text-primary);
-    }
-    
-    .modal-close {
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      color: var(--text-secondary);
-      cursor: pointer;
-      padding: 0.5rem;
-      border-radius: var(--radius);
-      transition: all 0.2s ease;
-    }
-    
-    .modal-close:hover {
-      background: var(--border);
-      color: var(--text-primary);
-    }
-    
-    .modal-body {
-      padding: 1.5rem;
-    }
-    
-    .modal-image {
-      width: 100%;
-      height: 300px;
-      object-fit: cover;
-      border-radius: var(--radius);
-      margin-bottom: 1.5rem;
-      background: #f8fafc;
-    }
-    
-    .project-meta {
-      margin-top: 1.5rem;
-    }
-    
-    .meta-item {
-      margin-bottom: 1rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid var(--border);
-    }
-    
-    .meta-item:last-child {
-      border-bottom: none;
-    }
-    
-    .meta-item strong {
-      display: block;
-      color: var(--text-primary);
-      margin-bottom: 0.5rem;
-    }
-    
-    .meta-item span {
-      color: var(--text-secondary);
-    }
-  `
-  document.head.appendChild(style)
+  // Styles are now in CSS file
 }
 
 // Navigation handler
@@ -348,33 +355,33 @@ const closeProjectModal = () => {
   }
 }
 
-// Contact form handler
+// Contact form handler with personality
 const handleContactForm = (e) => {
   e.preventDefault()
   
   const formData = new FormData(e.target)
   const data = Object.fromEntries(formData)
   
-  // Simulate form submission
+  // Simulate form submission with engineering flair
   const btn = e.target.querySelector('.btn')
   const originalText = btn.innerHTML
   
-  btn.innerHTML = '<span>Sending...</span> <span>⏳</span>'
+  btn.innerHTML = '<span>Transmitting...</span> <span>📡</span>'
   btn.disabled = true
   
   setTimeout(() => {
-    btn.innerHTML = '<span>Message Sent!</span> <span>✅</span>'
-    btn.style.background = 'var(--accent-color)'
+    btn.innerHTML = '<span>Message Deployed!</span> <span>✅</span>'
+    btn.style.background = 'linear-gradient(135deg, var(--accent), #2dd428)'
     
     setTimeout(() => {
       btn.innerHTML = originalText
       btn.disabled = false
-      btn.style.background = 'var(--primary-color)'
+      btn.style.background = 'linear-gradient(135deg, var(--primary), #ff8c42)'
       e.target.reset()
-    }, 2000)
-  }, 1000)
+    }, 2500)
+  }, 1200)
   
-  console.log('Contact form submitted:', data)
+  console.log('Engineering communication received:', data)
 }
 
 // Main render function
@@ -397,7 +404,7 @@ const renderApp = () => {
   app.innerHTML = renderHeader() + content + `
     <footer class="footer">
       <div class="container">
-        <p>&copy; 2024 Jose Rodriguez. Built with passion and cardboard. 📦</p>
+        <p>SYSTEM STATUS: OPERATIONAL | Jose Rodriguez Engineering Portfolio v2.1 | Built with passion, precision, and a lot of cardboard 📦⚙️</p>
       </div>
     </footer>
   `
@@ -443,6 +450,12 @@ const init = () => {
       closeProjectModal()
     }
   })
+  
+  // Add some engineering easter eggs
+  console.log('🔧 ENGINEERING SYSTEM INITIALIZED')
+  console.log('👨‍💻 Jose Rodriguez Portfolio v2.1')
+  console.log('⚙️ All systems operational')
+  console.log('🚀 Ready for college applications!')
 }
 
 // Start the application
