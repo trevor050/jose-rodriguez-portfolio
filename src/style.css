@@ -99,18 +99,12 @@ body::after {
     linear-gradient(90deg, rgba(139, 92, 246, 0.1) 1px, transparent 1px);
   background-size: 60px 60px;
   z-index: -1;
-  animation: gridMove 30s linear infinite;
 }
 
 body[data-theme="light"]::after {
   background-image: 
     linear-gradient(rgba(139, 92, 246, 0.12) 1px, transparent 1px),
     linear-gradient(90deg, rgba(139, 92, 246, 0.12) 1px, transparent 1px);
-}
-
-@keyframes gridMove {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(60px, 60px); }
 }
 
 /* Layout Container */
@@ -285,6 +279,9 @@ body[data-theme="light"] .project-image {
 
 .project-content {
   padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 200px); /* Account for image height */
 }
 
 .project-title {
@@ -299,6 +296,7 @@ body[data-theme="light"] .project-image {
   font-size: 1rem;
   line-height: 1.6;
   margin-bottom: 1rem;
+  flex-grow: 1; /* This pushes the meta to the bottom */
 }
 
 .project-meta {
@@ -308,6 +306,9 @@ body[data-theme="light"] .project-image {
   font-size: 0.85rem;
   color: var(--primary);
   font-weight: 500;
+  margin-top: auto; /* This ensures it stays at the bottom */
+  padding-top: 1rem;
+  border-top: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 /* Content Sections - Professional */
