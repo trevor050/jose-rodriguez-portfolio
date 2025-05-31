@@ -663,7 +663,8 @@ body[data-theme="light"] .form-group textarea:focus {
   color: var(--text-secondary);
 }
 
-.linkedin-link {
+/* Professional Network Link (Anti-Ad-Blocker) */
+.professional-network-link {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -673,30 +674,32 @@ body[data-theme="light"] .form-group textarea:focus {
   border-radius: 8px;
   color: var(--text-secondary);
   text-decoration: none;
-  transition: all 0.2s ease; /* Faster transition */
+  transition: all 0.2s ease;
   backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-md);
 }
 
-body[data-theme="light"] .linkedin-link {
+body[data-theme="light"] .professional-network-link {
   background: rgba(241, 245, 249, 0.8);
 }
 
-.linkedin-link:hover {
+.professional-network-link:hover {
   color: var(--text-primary);
   background: rgba(31, 41, 55, 0.6);
   border-color: var(--primary);
   transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
 }
 
-body[data-theme="light"] .linkedin-link:hover {
+body[data-theme="light"] .professional-network-link:hover {
   background: rgba(241, 245, 249, 0.95);
 }
 
-.linkedin-link svg {
-  transition: transform 0.2s ease; /* Faster transition */
+.professional-network-link svg {
+  transition: transform 0.2s ease;
 }
 
-.linkedin-link:hover svg {
+.professional-network-link:hover svg {
   transform: scale(1.1);
 }
 
@@ -1133,7 +1136,7 @@ body[data-theme="light"] .skill-bar {
     justify-content: center;
   }
   
-  .linkedin-link {
+  .professional-network-link {
     padding: 1rem 1.5rem;
   }
   

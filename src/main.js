@@ -703,6 +703,24 @@ const addEventListeners = () => {
     contactForm.addEventListener('submit', handleContactForm)
   }
   
+  // Anti-Ad-Blocker: Professional network link handler
+  const professionalNetworkLink = document.querySelector('.professional-network-link')
+  if (professionalNetworkLink) {
+    // Add enhanced click tracking and fallback
+    professionalNetworkLink.addEventListener('click', (e) => {
+      // Let the normal link work, but add fallback handling
+      console.log('🔗 Professional network connection initiated')
+      
+      // Fallback for ad blockers that might block the direct link
+      setTimeout(() => {
+        if (!document.hidden) {
+          // If user is still on the page after 100ms, the link might have been blocked
+          // We could show a modal with instructions here if needed
+        }
+      }, 100)
+    })
+  }
+  
   // Scroll to top button
   const scrollButton = document.getElementById('scroll-to-top')
   if (scrollButton) {
