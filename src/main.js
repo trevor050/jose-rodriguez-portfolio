@@ -2,126 +2,73 @@ import './style.css'
 import { renderProjects, renderAbout, renderContact } from './components/Views.js'
 import { renderProjectModal } from './components/ProjectCard.js'
 
-// Portfolio data - professional and college-focused
+/*
+===========================================
+    EASY CUSTOMIZATION SYSTEM
+===========================================
+
+Hi Jose! This file loads your portfolio data from separate files 
+that are much easier to edit. Here's what each file does:
+
+- src/data/projects.js = All your project information
+- src/data/about.js = Your About page content  
+- src/data/settings.js = Contact info and website settings
+
+HOW FILTERS WORK:
+The filter buttons are automatically created based on the 
+"category" field in each of your projects. You don't need 
+to manually create them - just use category names in your 
+projects and the website will automatically make filter buttons!
+
+ADDING NEW FILTERS:
+1. Open src/data/projects.js
+2. Add a new category name to any project
+3. Save the file - the filter button appears automatically!
+
+CURRENT CATEGORIES BEING USED:
+(These will automatically become filter buttons)
+*/
+
+// Import all the data from the separate, easy-to-edit files
+import { projectsData, portfolioStats } from './data/projects.js'
+import { aboutData } from './data/about.js'
+import { contactInfo, siteInfo } from './data/settings.js'
+
+// Combine everything into the format the website expects
 const portfolioData = {
-  projects: [
-    {
-      id: 1,
-      title: "Cardboard 4-Cylinder Engine",
-      description: "A functional 4-cylinder engine replica demonstrating mechanical engineering principles, precision assembly, and innovative material application in mechanical systems design.",
-      image: "/images/Cardboard Engine.png",
-      details: "This project demonstrates advanced understanding of internal combustion mechanics through unconventional material application. Built over three weeks with precise measurements and careful component integration, the model features working pistons and accurate cylinder timing. The project showcases problem-solving skills, attention to detail, and the ability to translate theoretical mechanical concepts into physical prototypes.",
-      tools: ["Precision Cutting Tools", "Engineering Rulers", "Technical Cardboard", "CAD Software", "Mathematical Analysis"],
-      timeline: "3 weeks",
-      learnings: "Advanced spatial reasoning, mechanical system integration, precision engineering tolerances, and innovative material application",
-      category: "Mechanical Systems",
-      difficulty: "Advanced",
-      status: "Completed"
-    },
-    {
-      id: 2,
-      title: "Rubber Band Crossbow",
-      description: "A precision-engineered projectile system utilizing elastic potential energy and mechanical advantage principles with focus on accuracy and safety considerations.",
-      image: "/images/diy crossbow.jpg",
-      details: "This project applies physics and engineering principles to create a functional projectile system. Features include adjustable draw weight, precision sighting mechanisms, and optimized launch mechanics. The design process included force analysis calculations, projectile motion modeling, and iterative testing for performance optimization while maintaining safety standards.",
-      tools: ["Hardwood Materials", "Precision Tools", "Physics Calculations", "Safety Testing Equipment"],
-      timeline: "2 weeks",
-      learnings: "Applied physics in engineering design, elastic energy systems, mechanical advantage principles, and safety-focused engineering",
-      category: "Physics Application",
-      difficulty: "Intermediate",
-      status: "Completed"
-    },
-    {
-      id: 3,
-      title: "Modular Cardboard Armor",
-      description: "A wearable protection system demonstrating structural engineering principles, ergonomic design considerations, and advanced material stress distribution analysis.",
-      image: "/images/Modular Cardboard Armor.jpg",
-      details: "This comprehensive design project encompasses the complete engineering process from initial concept to functional prototype. The system considers weight distribution, joint mobility, protection coverage, and manufacturing constraints. Each component is engineered for optimal protection while maintaining user comfort and range of motion, demonstrating human-centered design principles.",
-      tools: ["Structural Materials", "CAD Design Software", "Ergonomic Analysis", "Stress Testing Methods"],
-      timeline: "4 weeks",
-      learnings: "Human-centered design, structural load distribution, manufacturing optimization, and systems integration",
-      category: "Structural Engineering",
-      difficulty: "Expert",
-      status: "Completed"
-    },
-    {
-      id: 4,
-      title: "Precision Textile Engineering",
-      description: "Custom garment construction demonstrating textile engineering principles, precision manufacturing techniques, and material stress point analysis.",
-      image: "/images/Jeans Zipper.webp",
-      details: "This project explores the intersection of engineering principles and textile manufacturing. Features precision-sewn construction with reinforced stress points, custom fitting methodology, and durability optimization. The project demonstrates understanding of material properties, manufacturing processes, and quality control standards in textile engineering applications.",
-      tools: ["Industrial Equipment", "Quality Materials", "Pattern Design Software", "Stress Analysis"],
-      timeline: "1 week",
-      learnings: "Textile engineering principles, manufacturing efficiency, quality control processes, and material science applications",
-      category: "Materials Engineering",
-      difficulty: "Intermediate",
-      status: "Completed"
-    },
-    {
-      id: 5,
-      title: "Mechanical Pencil Dispenser",
-      description: "An automated dispensing mechanism demonstrating mechanical engineering principles including gear ratios, spring mechanics, and user interface design.",
-      image: "/images/Pencil Dispenser DIY.jpg",
-      details: "This project focuses on creating a reliable dispensing mechanism for mechanical pencils in an educational environment. The design incorporates gear reduction systems, spring-loaded mechanisms, and ergonomic considerations. The project required analysis of mechanical advantage, force distribution, and user interaction patterns to create an efficient and reliable system.",
-      tools: ["3D Printing", "Mechanical Components", "Spring Analysis", "Ergonomic Testing"],
-      timeline: "2 weeks",
-      learnings: "Mechanical advantage systems, user interface design, reliability engineering, and iterative prototyping",
-      category: "Mechanical Design",
-      difficulty: "Intermediate",
-      status: "Completed"
-    },
-    {
-      id: 6,
-      title: "Solar Panel Tracking System",
-      description: "A dual-axis solar tracking mechanism optimizing energy collection through automated positioning and real-time solar tracking algorithms.",
-      image: "/images/Solar Tracker DIY.webp",
-      details: "This project combines mechanical engineering with renewable energy optimization. The system uses servo motors and sensor feedback to continuously orient solar panels toward maximum sunlight exposure. The design process involved calculations for torque requirements, gear ratios, and control system integration while considering weather resistance and reliability factors.",
-      tools: ["Servo Motors", "Light Sensors", "Control Systems", "CAD Design", "Energy Analysis"],
-      timeline: "5 weeks",
-      learnings: "Control systems integration, renewable energy optimization, sensor feedback loops, and sustainable engineering practices",
-      category: "Renewable Energy",
-      difficulty: "Advanced",
-      status: "Completed"
-    },
-    {
-      id: 7,
-      title: "Hydraulic Press Demonstrator",
-      description: "A scaled hydraulic press system demonstrating Pascal's principle, force multiplication, and hydraulic engineering fundamentals in mechanical applications.",
-      image: "/images/DIY Hydraulic Press.jpg",
-      details: "This educational demonstration tool illustrates fundamental hydraulic principles through hands-on engineering. The project required careful analysis of pressure systems, force calculations, and safety considerations. The design incorporates clear visual elements to demonstrate force multiplication while maintaining safe operating parameters for educational use.",
-      tools: ["Hydraulic Components", "Pressure Analysis", "Safety Systems", "Educational Design"],
-      timeline: "3 weeks",
-      learnings: "Hydraulic system design, pressure calculations, safety engineering, and educational tool development",
-      category: "Fluid Mechanics",
-      difficulty: "Advanced",
-      status: "Completed"
-    },
-    {
-      id: 8,
-      title: "Precision Balance Scale",
-      description: "A mechanical balance system demonstrating precision measurement principles, calibration techniques, and mechanical sensitivity optimization.",
-      image: "/images/DIY Balance Scale.jpg",
-      details: "This project focuses on creating a highly sensitive mechanical balance capable of precise measurements. The design required analysis of lever mechanics, friction reduction, and calibration methodologies. Special attention was given to minimizing environmental factors and optimizing mechanical sensitivity while maintaining structural stability.",
-      tools: ["Precision Machining", "Calibration Weights", "Friction Analysis", "Sensitivity Testing"],
-      timeline: "4 weeks",
-      learnings: "Precision engineering, calibration techniques, mechanical sensitivity, and measurement system design",
-      category: "Precision Instruments",
-      difficulty: "Expert",
-      status: "Completed"
-    }
-  ],
-  stats: {
-    projectsCompleted: 18,
-    hoursEngineering: 312,
-    materialsUsed: 12,
-    problemsSolved: 47
-  }
+  projects: projectsData,
+  stats: portfolioStats,
+  about: aboutData,
+  contact: contactInfo,
+  siteInfo: siteInfo
 }
 
 // Application state
 let currentView = 'projects'
 let isDarkMode = true
 let currentFilter = 'All'
+
+/*
+===========================================
+    AUTOMATIC FILTER GENERATION
+===========================================
+
+This function automatically creates filter buttons based on 
+what categories you use in your projects. You never need to 
+manually add or remove filter buttons!
+*/
+const getAvailableCategories = () => {
+  // Get all unique categories from projects
+  const categories = [...new Set(projectsData.map(project => project.category))]
+  
+  // Always include "All" as the first option
+  return ['All', ...categories.sort()]
+}
+
+// Log the current categories so Jose can see what's available
+console.log('📁 Current project categories (auto-generated filter buttons):')
+console.log(getAvailableCategories())
+console.log('💡 To add new categories, just edit src/data/projects.js and add new category names!')
 
 // Intersection Observer for animations
 const observerOptions = {
@@ -198,7 +145,15 @@ const handleScroll = () => {
   }
 }
 
-// Project filtering functionality
+/*
+===========================================
+    AUTOMATIC FILTER FUNCTIONALITY
+===========================================
+
+This handles filtering projects by category. The categories
+are automatically detected from your project data, so you 
+never need to manually update this code!
+*/
 const filterProjects = (category) => {
   currentFilter = category
   const projectCards = document.querySelectorAll('.project-card')
@@ -679,7 +634,7 @@ const addEventListeners = () => {
     }
   })
   
-  // Project filters
+  // Project filters - AUTOMATIC GENERATION!
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const category = e.target.dataset.category
@@ -719,10 +674,13 @@ const init = () => {
   // Hide loading indicator after initial load
   setTimeout(hideLoading, 300) // Faster initial load
   
-  console.log('Jose Rodriguez Engineering Portfolio')
-  console.log('System initialized successfully')
+  console.log('🔧 Jose Rodriguez Engineering Portfolio')
+  console.log('✅ System initialized successfully')
+  console.log('📊 Project data loaded from: src/data/projects.js')
+  console.log('👤 About data loaded from: src/data/about.js') 
+  console.log('⚙️  Settings loaded from: src/data/settings.js')
   if (!isMobile()) {
-    console.log('Keyboard shortcuts available: Ctrl+1, Ctrl+2, Ctrl+3, Ctrl+\\')
+    console.log('⌨️  Keyboard shortcuts available: Ctrl+1, Ctrl+2, Ctrl+3, Ctrl+\\')
   }
 }
 
