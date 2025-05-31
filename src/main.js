@@ -121,6 +121,166 @@ const portfolioData = {
 // Application state
 let currentView = 'projects'
 let isDarkMode = true
+let currentFilter = 'All'
+
+// Intersection Observer for animations
+const observerOptions = {
+  threshold: 0.1,
+  rootMargin: '0px 0px -30px 0px' // Trigger earlier
+}
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible')
+      
+      // Trigger skill progress animations
+      if (entry.target.classList.contains('skills-section')) {
+        animateSkillBars()
+      }
+      
+      // Trigger counter animations
+      if (entry.target.classList.contains('stats-grid')) {
+        animateCounters()
+      }
+    }
+  })
+}, observerOptions)
+
+// Animate skill progress bars
+const animateSkillBars = () => {
+  const skillBars = document.querySelectorAll('.skill-progress')
+  skillBars.forEach((bar, index) => {
+    const progress = bar.dataset.progress
+    setTimeout(() => {
+      bar.style.width = `${progress}%`
+    }, index * 100) // Faster staggering
+  })
+}
+
+// Faster, smoother counter animation
+const animateCounters = () => {
+  const counters = document.querySelectorAll('[data-count]')
+  counters.forEach((counter, index) => {
+    const target = parseInt(counter.dataset.count)
+    let current = 0
+    const increment = target / 50 // Faster animation (50 frames instead of 60)
+    
+    const updateCounter = () => {
+      if (current < target) {
+        current += increment
+        counter.textContent = Math.floor(current) + '+'
+        requestAnimationFrame(updateCounter)
+      } else {
+        counter.textContent = target + '+'
+      }
+    }
+    
+    setTimeout(updateCounter, index * 150) // Faster staggering
+  })
+}
+
+// Scroll to top functionality
+const scrollToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  })
+}
+
+// Show/hide scroll to top button
+const handleScroll = () => {
+  const scrollButton = document.getElementById('scroll-to-top')
+  if (window.pageYOffset > 300) {
+    scrollButton.classList.add('visible')
+  } else {
+    scrollButton.classList.remove('visible')
+  }
+}
+
+// Project filtering functionality
+const filterProjects = (category) => {
+  currentFilter = category
+  const projectCards = document.querySelectorAll('.project-card')
+  const filterButtons = document.querySelectorAll('.filter-btn')
+  
+  // Update active filter button
+  filterButtons.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.category === category)
+  })
+  
+  // Filter project cards with faster animation
+  projectCards.forEach(card => {
+    card.classList.add('filtering')
+    const projectCategory = card.dataset.category || 'All'
+    
+    if (category === 'All' || projectCategory === category) {
+      setTimeout(() => {
+        card.classList.remove('hidden')
+        card.classList.remove('filtering')
+      }, 100) // Faster showing
+    } else {
+      card.classList.add('hidden')
+      setTimeout(() => {
+        card.classList.remove('filtering')
+      }, 300) // Faster hiding
+    }
+  })
+}
+
+// Enhanced keyboard navigation
+const handleKeyboardNavigation = (e) => {
+  // Close modal on Escape
+  if (e.key === 'Escape') {
+    closeProjectModal()
+  }
+  
+  // Navigate with arrow keys when modal is open
+  if (document.getElementById('project-modal')) {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      // Implement project navigation in modal if desired
+    }
+  }
+  
+  // Quick navigation shortcuts (only on desktop)
+  if (!isMobile() && (e.ctrlKey || e.metaKey)) {
+    switch (e.key) {
+      case '1':
+        e.preventDefault()
+        handleNavigation('projects')
+        break
+      case '2':
+        e.preventDefault()
+        handleNavigation('about')
+        break
+      case '3':
+        e.preventDefault()
+        handleNavigation('contact')
+        break
+      case '\\':
+        e.preventDefault()
+        toggleTheme()
+        break
+    }
+  }
+}
+
+// Mobile detection utility
+const isMobile = () => {
+  return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+}
+
+// Show loading indicator
+const showLoading = () => {
+  const loading = document.getElementById('loading-indicator')
+  loading.classList.remove('hidden')
+}
+
+// Hide loading indicator
+const hideLoading = () => {
+  const loading = document.getElementById('loading-indicator')
+  loading.classList.add('hidden')
+}
 
 // Theme toggle functionality
 const toggleTheme = () => {
@@ -137,30 +297,31 @@ const toggleTheme = () => {
   }
 }
 
-// Header component
+// Header component with skip link and mobile-friendly footer
 const renderHeader = () => {
   const lightIcon = '<svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z"/></svg>'
   const darkIcon = '<svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z"/></svg>'
   
   return `
-    <header class="header">
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <header class="header" role="banner">
       <div class="container">
         <div class="header-top">
           <h1>Jose Rodriguez</h1>
-          <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+          <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle between light and dark theme">
             <span class="theme-icon">${isDarkMode ? lightIcon : darkIcon}</span>
           </button>
         </div>
         <p class="subtitle">Aspiring Mechanical Engineer</p>
         <p class="tagline">Dedicated to solving complex engineering challenges through innovative design, precise execution, and creative problem-solving.</p>
-        <nav class="nav">
-          <a href="#" class="nav-item ${currentView === 'projects' ? 'active' : ''}" data-view="projects">
+        <nav class="nav" role="navigation" aria-label="Main navigation">
+          <a href="#" class="nav-item ${currentView === 'projects' ? 'active' : ''}" data-view="projects" aria-current="${currentView === 'projects' ? 'page' : 'false'}">
             <span>Projects</span>
           </a>
-          <a href="#" class="nav-item ${currentView === 'about' ? 'active' : ''}" data-view="about">
+          <a href="#" class="nav-item ${currentView === 'about' ? 'active' : ''}" data-view="about" aria-current="${currentView === 'about' ? 'page' : 'false'}">
             <span>About</span>
           </a>
-          <a href="#" class="nav-item ${currentView === 'contact' ? 'active' : ''}" data-view="contact">
+          <a href="#" class="nav-item ${currentView === 'contact' ? 'active' : ''}" data-view="contact" aria-current="${currentView === 'contact' ? 'page' : 'false'}">
             <span>Contact</span>
           </a>
         </nav>
@@ -169,10 +330,32 @@ const renderHeader = () => {
   `
 }
 
-// Navigation handler
+// Navigation handler with faster loading states
 const handleNavigation = (view) => {
-  currentView = view
-  renderApp()
+  if (view === currentView) return
+  
+  showLoading()
+  
+  setTimeout(() => {
+    currentView = view
+    renderApp()
+    hideLoading()
+    
+    // Scroll to top on navigation
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    
+    // Announce page change to screen readers
+    const announcement = document.createElement('div')
+    announcement.setAttribute('aria-live', 'polite')
+    announcement.setAttribute('aria-atomic', 'true')
+    announcement.className = 'sr-only'
+    announcement.textContent = `Navigated to ${view} section`
+    document.body.appendChild(announcement)
+    
+    setTimeout(() => {
+      document.body.removeChild(announcement)
+    }, 1000)
+  }, 100) // Faster loading transition
 }
 
 // Project interactions
@@ -403,10 +586,18 @@ const clearFormErrors = () => {
   }
 }
 
+// Enhanced project card with better attributes
+const enhanceProjectCard = (card, project) => {
+  card.setAttribute('tabindex', '0')
+  card.setAttribute('role', 'button')
+  card.setAttribute('aria-label', `View details for ${project.title}`)
+  card.dataset.category = project.category
+}
+
 // Make toggleTheme available globally
 window.toggleTheme = toggleTheme
 
-// Main render function
+// Enhanced render function with mobile-friendly footer
 const renderApp = () => {
   const app = document.querySelector('#app')
   
@@ -423,18 +614,43 @@ const renderApp = () => {
       break
   }
   
-  app.innerHTML = renderHeader() + content + `
-    <footer class="footer">
+  // Mobile-friendly footer
+  const footerText = isMobile() ? 
+    '© 2024 Jose Rodriguez' : 
+    '© 2024 Jose Rodriguez Engineering Portfolio | Built with precision and passion for mechanical engineering'
+  
+  const keyboardShortcuts = isMobile() ? '' : `
+    <p class="footer-shortcuts">
+      Keyboard shortcuts: Ctrl+1 (Projects), Ctrl+2 (About), Ctrl+3 (Contact), Ctrl+\\ (Theme)
+    </p>
+  `
+  
+  app.innerHTML = renderHeader() + `<main id="main-content" role="main">` + content + `</main>` + `
+    <footer class="footer" role="contentinfo">
       <div class="container">
-        <p>&copy; 2024 Jose Rodriguez Engineering Portfolio | Built with precision and passion for mechanical engineering</p>
+        <div class="footer-content">
+          <p class="footer-main">${footerText}</p>
+          ${keyboardShortcuts}
+        </div>
       </div>
     </footer>
   `
   
   addEventListeners()
+  setupIntersectionObserver()
 }
 
-// Event listeners
+// Setup intersection observer for animations
+const setupIntersectionObserver = () => {
+  // Clear previous observers
+  observer.disconnect()
+  
+  // Observe new elements
+  const animatedElements = document.querySelectorAll('.fade-in-up, .fade-in-left, .fade-in-right, .skills-section, .stats-grid')
+  animatedElements.forEach(el => observer.observe(el))
+}
+
+// Enhanced event listeners
 const addEventListeners = () => {
   // Navigation
   document.querySelectorAll('.nav-item').forEach(item => {
@@ -445,11 +661,29 @@ const addEventListeners = () => {
     })
   })
   
-  // Project cards
+  // Project cards with enhanced attributes
   document.querySelectorAll('.project-card').forEach(card => {
-    card.addEventListener('click', (e) => {
-      const projectId = e.currentTarget.dataset.projectId
-      handleProjectClick(projectId)
+    const projectId = card.dataset.projectId
+    const project = portfolioData.projects.find(p => p.id === parseInt(projectId))
+    
+    if (project) {
+      enhanceProjectCard(card, project)
+      
+      card.addEventListener('click', () => handleProjectClick(projectId))
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          handleProjectClick(projectId)
+        }
+      })
+    }
+  })
+  
+  // Project filters
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const category = e.target.dataset.category
+      filterProjects(category)
     })
   })
   
@@ -458,9 +692,15 @@ const addEventListeners = () => {
   if (contactForm) {
     contactForm.addEventListener('submit', handleContactForm)
   }
+  
+  // Scroll to top button
+  const scrollButton = document.getElementById('scroll-to-top')
+  if (scrollButton) {
+    scrollButton.addEventListener('click', scrollToTop)
+  }
 }
 
-// Initialize the application
+// Initialize the application with enhanced features
 const init = () => {
   // Set initial theme from localStorage
   const savedTheme = localStorage.getItem('theme')
@@ -469,17 +709,21 @@ const init = () => {
   }
   document.body.setAttribute('data-theme', isDarkMode ? 'dark' : 'light')
   
+  // Add event listeners
+  window.addEventListener('scroll', handleScroll)
+  document.addEventListener('keydown', handleKeyboardNavigation)
+  
+  // Initial render
   renderApp()
   
-  // Keyboard navigation
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      closeProjectModal()
-    }
-  })
+  // Hide loading indicator after initial load
+  setTimeout(hideLoading, 300) // Faster initial load
   
   console.log('Jose Rodriguez Engineering Portfolio')
   console.log('System initialized successfully')
+  if (!isMobile()) {
+    console.log('Keyboard shortcuts available: Ctrl+1, Ctrl+2, Ctrl+3, Ctrl+\\')
+  }
 }
 
 // Start the application

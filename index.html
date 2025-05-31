@@ -1,18 +1,74 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Jose Rodriguez - Aspiring Mechanical Engineer building real-world mechanisms from cardboard, code, and curiosity" />
-    <meta name="author" content="Jose Rodriguez" />
-    <title>Jose Rodriguez - Mechanical Engineer Portfolio</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- SEO Meta Tags -->
+    <title>Jose Rodriguez - Mechanical Engineering Portfolio | High School Student</title>
+    <meta name="description" content="Jose Rodriguez's engineering portfolio showcasing innovative mechanical engineering projects, including cardboard engines, solar tracking systems, and precision instruments. High school junior preparing for mechanical engineering studies.">
+    <meta name="keywords" content="Jose Rodriguez, mechanical engineering, high school portfolio, engineering projects, cardboard engine, solar tracker, college application portfolio">
+    <meta name="author" content="Jose Rodriguez">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://jose-rodriguez-portfolio.vercel.app/">
+    <meta property="og:title" content="Jose Rodriguez - Mechanical Engineering Portfolio">
+    <meta property="og:description" content="Innovative mechanical engineering projects by high school student Jose Rodriguez, featuring cardboard engines, solar tracking systems, and precision instruments.">
+    <meta property="og:image" content="https://jose-rodriguez-portfolio.vercel.app/images/portfolio-preview.jpg">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://jose-rodriguez-portfolio.vercel.app/">
+    <meta property="twitter:title" content="Jose Rodriguez - Mechanical Engineering Portfolio">
+    <meta property="twitter:description" content="Innovative mechanical engineering projects by high school student Jose Rodriguez.">
+    <meta property="twitter:image" content="https://jose-rodriguez-portfolio.vercel.app/images/portfolio-preview.jpg">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" href="/favicon.ico" />
+    
+    <!-- Preload critical fonts -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" as="style">
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Jose Rodriguez",
+      "jobTitle": "Aspiring Mechanical Engineer",
+      "description": "High school junior with passion for mechanical engineering and innovative problem-solving",
+      "url": "https://jose-rodriguez-portfolio.vercel.app/",
+      "sameAs": [
+        "https://linkedin.com/in/jose-rodriguez-engineer"
+      ],
+      "knowsAbout": [
+        "Mechanical Engineering",
+        "CAD Design",
+        "3D Printing",
+        "Arduino Programming",
+        "Problem Solving"
+      ]
+    }
+    </script>
   </head>
-  <body>
-    <div id="app"></div>
+  <body data-theme="dark">
+    <div id="app" role="main"></div>
+    
+    <!-- Scroll to top button -->
+    <button id="scroll-to-top" class="scroll-to-top" aria-label="Scroll to top" title="Scroll to top">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="m18 15-6-6-6 6"/>
+      </svg>
+    </button>
+    
+    <!-- Loading indicator -->
+    <div id="loading-indicator" class="loading-indicator" aria-hidden="true">
+      <div class="loading-spinner"></div>
+    </div>
+    
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
