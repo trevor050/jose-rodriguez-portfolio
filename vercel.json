@@ -7,7 +7,6 @@
     "autoDeployment": true,
     "autoJob": true
   },
-  "functions": {},
   "rewrites": [
     {
       "source": "/(.*)",
