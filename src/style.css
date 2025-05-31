@@ -134,6 +134,8 @@ body[data-theme="light"]::after {
   color: var(--text-primary);
   letter-spacing: -0.02em;
   flex: 1;
+  text-align: center; /* Ensure proper centering */
+  margin-left: 48px; /* Offset for theme button to achieve true centering */
 }
 
 .theme-toggle {
@@ -1030,24 +1032,6 @@ body[data-theme="light"] .skill-bar {
   outline-offset: 2px;
 }
 
-/* Skip Link for Screen Readers */
-.skip-link {
-  position: absolute;
-  top: -40px;
-  left: 6px;
-  background: var(--primary);
-  color: white;
-  padding: 8px;
-  text-decoration: none;
-  border-radius: 4px;
-  z-index: 1000;
-  transition: top 0.2s ease; /* Faster */
-}
-
-.skip-link:focus {
-  top: 6px;
-}
-
 /* Enhanced Mobile Navigation */
 @media (max-width: 768px) {
   .container {
@@ -1067,7 +1051,8 @@ body[data-theme="light"] .skill-bar {
   
   .header h1 {
     font-size: clamp(2rem, 10vw, 2.8rem);
-    text-align: left;
+    text-align: left; /* Keep left alignment on mobile */
+    margin-left: 0; /* Remove centering offset on mobile */
   }
   
   .theme-toggle {
