@@ -179,7 +179,7 @@ async function sendEmail({ name, email, subject, message }) {
   return false
 }
 
-// COMPREHENSIVE SPAM ANALYSIS SYSTEM
+// AGGRESSIVE SPAM ANALYSIS SYSTEM - No mercy for spam!
 function analyzeSpamLevel({ name, email, subject, message }) {
   let spamScore = 0
   const flags = []
@@ -187,146 +187,175 @@ function analyzeSpamLevel({ name, email, subject, message }) {
   // Combine all text for analysis
   const allText = `${name} ${subject} ${message}`.toLowerCase()
   const emailDomain = email.split('@')[1]?.toLowerCase() || ''
+  const emailLocal = email.split('@')[0]?.toLowerCase() || ''
   
-  // 1. OBVIOUS SPAM KEYWORDS (High weight - 3 points each)
+  // 1. INSTANT SPAM DOMAINS (5 points - almost always spam)
+  const bannedDomains = [
+    'tk', 'ml', 'ga', 'cf', 'suslink.tk', 'guerrillamail.com', 'mailinator.com',
+    'tempmail.org', 'yopmail.com', 'throwaway.email', 'temp-mail.org', 
+    'dispostable.com', 'getairmail.com', 'sharklasers.com', 'trashmail.com'
+  ]
+  
+  if (bannedDomains.some(domain => emailDomain.includes(domain))) {
+    spamScore += 5
+    flags.push(`High-risk domain: ${emailDomain}`)
+  }
+  
+  // 2. OBVIOUS SPAM CONTENT (4 points each - hard spam)
   const hardSpamKeywords = [
     'buy now', 'click here', 'free money', 'make money fast', 'viagra', 
     'casino online', 'lottery winner', 'crypto investment', 'get rich quick',
     'limited time offer', 'act now', 'guaranteed income', '$$$', 'bitcoin',
     'forex', 'investment opportunity', 'work from home', 'earn cash',
-    'no experience required', 'double your money'
+    'no experience required', 'double your money', 'winner', 'congratulations',
+    'claim your prize', 'selected', 'million dollars', 'inheritance'
   ]
   
   hardSpamKeywords.forEach(keyword => {
     if (allText.includes(keyword)) {
-      spamScore += 3
+      spamScore += 4
       flags.push(`Hard spam keyword: "${keyword}"`)
     }
   })
   
-  // 2. SUSPICIOUS URL PATTERNS (2 points each)
+  // 3. GIBBERISH/REPEATED CHARACTERS (3 points - obvious spam)
+  if (/(.)\1{6,}/gi.test(allText)) {  // 6+ repeated chars (was 10+)
+    spamScore += 3
+    flags.push('Excessive repeated characters (gibberish)')
+  }
+  
+  // 4. SUSPICIOUS PATTERNS (2 points each)
+  
+  // Random email addresses
+  if (/\d{4,}/.test(emailLocal) || emailLocal.length > 15) {
+    spamScore += 2
+    flags.push('Suspicious email pattern (random numbers/too long)')
+  }
+  
+  // Generic/meaningless names
+  const genericNames = ['test', 'user', 'admin', 'contact', 'info', 'hello', 'john doe']
+  if (genericNames.some(generic => name.toLowerCase().includes(generic))) {
+    spamScore += 2
+    flags.push('Generic/fake name detected')
+  }
+  
+  // Suspicious URLs
   const suspiciousUrls = [
     /https?:\/\/[^\s]+\.(tk|ml|ga|cf|bit\.ly|tinyurl|t\.co|ow\.ly)/gi,
     /discord\.gg\/[^\s]+/gi,
     /t\.me\/[^\s]+/gi,
-    /telegram\.me\/[^\s]+/gi
+    /telegram\.me\/[^\s]+/gi,
+    /whatsapp\.com\/[^\s]+/gi
   ]
   
   suspiciousUrls.forEach(pattern => {
     if (pattern.test(allText)) {
       spamScore += 2
-      flags.push('Suspicious URL pattern detected')
+      flags.push('Suspicious URL/link detected')
     }
   })
   
-  // 3. DISPOSABLE EMAIL DOMAINS (2 points)
-  const disposableDomains = [
-    '10minutemail.com', 'guerrillamail.com', 'mailinator.com', 'tempmail.org',
-    'yopmail.com', 'throwaway.email', 'temp-mail.org', 'mailnesia.com',
-    'getairmail.com', 'sharklasers.com', 'trashmail.com', 'dispostable.com'
-  ]
-  
-  if (disposableDomains.includes(emailDomain)) {
-    spamScore += 2
-    flags.push(`Disposable email domain: ${emailDomain}`)
-  }
-  
-  // 4. CONTENT QUALITY CHECKS (1 point each)
+  // 5. QUALITY ISSUES (1-2 points each)
   
   // Very short messages
-  if (message.length < 20) {
-    spamScore += 1
-    flags.push('Message too short')
+  if (message.length < 30) {  // Increased from 20
+    spamScore += 2
+    flags.push('Message too short (likely spam)')
   }
   
-  // Excessive repeated characters
-  if (/(.)\1{10,}/gi.test(allText)) {
-    spamScore += 1
-    flags.push('Excessive repeated characters')
+  // Meaningless content
+  if (message.length < 50 && !/[.!?]/.test(message)) {
+    spamScore += 2
+    flags.push('No punctuation in short message')
   }
   
-  // Too many special characters
-  if (/[^\w\s@.-]{5,}/gi.test(allText)) {
-    spamScore += 1
-    flags.push('Too many special characters')
-  }
-  
-  // ALL CAPS MESSAGE
+  // ALL CAPS
   if (message.length > 20 && message === message.toUpperCase()) {
-    spamScore += 1
-    flags.push('All caps message')
+    spamScore += 2
+    flags.push('All caps message (shouting)')
   }
   
   // Excessive punctuation
-  if (/[!?]{3,}/gi.test(allText)) {
+  if (/[!?]{2,}/gi.test(allText)) {  // 2+ (was 3+)
     spamScore += 1
     flags.push('Excessive punctuation')
   }
   
-  // 5. SUSPICIOUS PATTERNS (1 point each)
-  
-  // Email doesn't match name pattern (basic check)
-  const nameWords = name.toLowerCase().split(' ')
-  const emailLocal = email.split('@')[0]?.toLowerCase() || ''
-  const hasNameInEmail = nameWords.some(word => 
-    word.length > 2 && emailLocal.includes(word.substring(0, 3))
-  )
-  
-  if (!hasNameInEmail && nameWords.length > 1) {
+  // Too many special characters
+  if (/[^\w\s@.-]{3,}/gi.test(allText)) {  // 3+ (was 5+)
     spamScore += 1
-    flags.push('Email doesn\'t seem to match name')
+    flags.push('Too many special characters')
   }
   
   // Generic subjects
-  const genericSubjects = ['hello', 'hi', 'contact', 'question', 'inquiry']
+  const genericSubjects = ['hello', 'hi', 'contact', 'question', 'inquiry', 'hey', 'test']
   if (genericSubjects.includes(subject.toLowerCase().trim())) {
     spamScore += 1
     flags.push('Generic subject line')
   }
   
-  // 6. POSITIVE INDICATORS (reduce spam score)
+  // Email-name mismatch (more aggressive)
+  const nameWords = name.toLowerCase().split(' ').filter(word => word.length > 2)
+  const hasNameInEmail = nameWords.some(word => 
+    emailLocal.includes(word.substring(0, Math.min(4, word.length)))
+  )
   
-  // Professional/educational domains
-  const professionalDomains = [
-    '.edu', '.gov', '.org', 'gmail.com', 'outlook.com', 'yahoo.com',
-    'company.com', 'university.edu', 'college.edu'
-  ]
-  
-  if (professionalDomains.some(domain => emailDomain.includes(domain.replace('.', '')))) {
-    spamScore = Math.max(0, spamScore - 1)
-    flags.push('Professional/trusted email domain')
+  if (!hasNameInEmail && nameWords.length > 0) {
+    spamScore += 1
+    flags.push('Email doesn\'t match provided name')
   }
   
-  // Engineering/college keywords (reduce spam score)
+  // 6. POSITIVE INDICATORS (reduce spam score - but less generous)
+  
+  // Trusted domains (only major ones)
+  const trustedDomains = ['gmail.com', 'outlook.com', 'yahoo.com', 'hotmail.com']
+  const eduGovDomains = ['.edu', '.gov', '.ac.uk', 'university', 'college']
+  
+  if (trustedDomains.includes(emailDomain)) {
+    spamScore = Math.max(0, spamScore - 1)
+    flags.push('Trusted email provider')
+  }
+  
+  if (eduGovDomains.some(domain => emailDomain.includes(domain))) {
+    spamScore = Math.max(0, spamScore - 2)
+    flags.push('Educational/government domain')
+  }
+  
+  // Engineering/academic keywords (but less weight)
   const legitimateKeywords = [
     'engineering', 'college', 'university', 'student', 'application',
     'admissions', 'program', 'mechanical', 'portfolio', 'project',
-    'internship', 'scholarship', 'research', 'academic'
+    'internship', 'scholarship', 'research', 'academic', 'degree'
   ]
   
   if (legitimateKeywords.some(keyword => allText.includes(keyword))) {
-    spamScore = Math.max(0, spamScore - 2)
-    flags.push('Contains legitimate academic/engineering keywords')
+    spamScore = Math.max(0, spamScore - 1)  // Reduced from -2
+    flags.push('Contains academic/engineering keywords')
   }
   
-  // Proper grammar and sentence structure (basic check)
-  const sentences = message.split(/[.!?]+/).filter(s => s.trim().length > 0)
-  if (sentences.length >= 2 && sentences.every(s => s.trim().length > 10)) {
+  // Well-structured content
+  const sentences = message.split(/[.!?]+/).filter(s => s.trim().length > 15)
+  if (sentences.length >= 2 && message.length > 100) {
     spamScore = Math.max(0, spamScore - 1)
     flags.push('Well-structured message')
   }
   
-  // 7. DETERMINE SPAM STATUS
-  const isSpam = spamScore >= 4 // Threshold: 4+ points = spam
-  const riskLevel = spamScore >= 6 ? 'HIGH' : spamScore >= 4 ? 'MEDIUM' : spamScore >= 2 ? 'LOW' : 'CLEAN'
+  // 7. DETERMINE SPAM STATUS (More aggressive thresholds)
+  const isSpam = spamScore >= 3  // Lowered from 4 (more aggressive)
+  const riskLevel = spamScore >= 8 ? 'CRITICAL' : 
+                   spamScore >= 6 ? 'HIGH' : 
+                   spamScore >= 4 ? 'MEDIUM' : 
+                   spamScore >= 2 ? 'LOW' : 'CLEAN'
   
   return {
-    score: Math.min(spamScore, 10), // Cap at 10
+    score: Math.min(spamScore, 10),
     isSpam,
     riskLevel,
     flags,
     recommendation: isSpam ? 'Route to spam channel' : 'Route to main channel',
-    confidence: spamScore >= 6 ? 'High confidence' : spamScore >= 4 ? 'Medium confidence' : 'Low risk'
+    confidence: spamScore >= 6 ? 'High confidence spam' : 
+               spamScore >= 4 ? 'Likely spam' : 
+               spamScore >= 2 ? 'Suspicious' : 'Legitimate'
   }
 }
 
@@ -335,14 +364,17 @@ async function sendViaDiscord({ name, email, subject, message, spamAnalysis, cha
   try {
     console.log('📤 Preparing Discord embed message...')
     
-    // Color based on spam risk level
-    const embedColor = spamAnalysis.riskLevel === 'HIGH' ? 0xFF4444 :      // Red
-                      spamAnalysis.riskLevel === 'MEDIUM' ? 0xFF8800 :    // Orange  
-                      spamAnalysis.riskLevel === 'LOW' ? 0xFFDD00 :       // Yellow
-                      0x00AA44                                            // Green
+    // Color based on spam risk level (more dramatic colors)
+    const embedColor = spamAnalysis.riskLevel === 'CRITICAL' ? 0x8B0000 :   // Dark Red
+                      spamAnalysis.riskLevel === 'HIGH' ? 0xFF0000 :        // Bright Red
+                      spamAnalysis.riskLevel === 'MEDIUM' ? 0xFF4500 :      // Orange Red  
+                      spamAnalysis.riskLevel === 'LOW' ? 0xFFD700 :         // Gold
+                      0x00AA44                                              // Green
     
     const embed = {
-      title: channelType === 'SPAM' ? "⚠️ Potential Spam Contact" : "🔧 New Portfolio Contact!",
+      title: channelType === 'SPAM' ? 
+        `🚨 ${spamAnalysis.riskLevel} RISK SPAM` : 
+        "🔧 New Portfolio Contact!",
       color: embedColor,
       fields: [
         {
@@ -357,7 +389,7 @@ async function sendViaDiscord({ name, email, subject, message, spamAnalysis, cha
         },
         {
           name: "🎯 Risk Level",
-          value: `${spamAnalysis.riskLevel} (${spamAnalysis.score}/10)`,
+          value: `**${spamAnalysis.riskLevel}** (${spamAnalysis.score}/10)`,
           inline: true
         },
         {
@@ -367,21 +399,21 @@ async function sendViaDiscord({ name, email, subject, message, spamAnalysis, cha
         },
         {
           name: "💬 Message",
-          value: message.length > 1000 ? message.substring(0, 1000) + "..." : message,
+          value: message.length > 800 ? message.substring(0, 800) + "..." : message,
           inline: false
         },
         {
           name: "🔍 Spam Analysis",
           value: `
-**Confidence:** ${spamAnalysis.confidence}
-**Recommendation:** ${spamAnalysis.recommendation}
-**Flags:** ${spamAnalysis.flags.length > 0 ? spamAnalysis.flags.join(', ') : 'None detected'}
+**Status:** ${spamAnalysis.confidence}
+**Action:** ${spamAnalysis.recommendation}
+**Flags:** ${spamAnalysis.flags.length > 0 ? spamAnalysis.flags.slice(0, 3).join(', ') + (spamAnalysis.flags.length > 3 ? '...' : '') : 'None detected'}
           `.trim(),
           inline: false
         }
       ],
       footer: {
-        text: `Jose Rodriguez Portfolio • ${new Date().toLocaleString()} • ${channelType} Channel`
+        text: `Jose Rodriguez Portfolio • ${new Date().toLocaleString()} • ${channelType} Channel • Score: ${spamAnalysis.score}/10`
       },
       timestamp: new Date().toISOString()
     }

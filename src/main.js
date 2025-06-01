@@ -534,57 +534,17 @@ const closeProjectModal = () => {
   }
 }
 
-// Honeypot detection
-const detectHoneypot = (formData) => {
-  // If the invisible "website" field is filled, it's likely a bot
-  if (formData.website && formData.website.trim() !== '') {
-    console.log('🍯 Honeypot triggered - likely bot submission')
-    return true
-  }
-  return false
-}
-
-// CONSERVATIVE content analysis - only blocks obvious spam
-const analyzeContentQuality = (data) => {
-  const allText = (data.name + ' ' + data.subject + ' ' + data.message).toLowerCase()
-  
-  // Only block if multiple obvious spam indicators
-  const spamIndicators = [
-    OBVIOUS_SPAM.some(spam => allText.includes(spam)),
-    /https?:\/\/[^\s]+\.(tk|ml|ga|cf)/gi.test(allText), // Suspicious domains
-    allText.length < 20, // Extremely short messages
-    /(.)\1{10,}/gi.test(allText), // Excessive repeated characters
-    /[^\w\s@.-]{5,}/gi.test(allText) // Too many special characters
-  ]
-  
-  const spamScore = spamIndicators.filter(Boolean).length
-  return spamScore >= 3 // Need multiple indicators to block
-}
-
-// Enhanced contact form validation with CONSERVATIVE anti-spam measures
+// Enhanced contact form validation with MINIMAL frontend checks (backend handles spam)
 const validateContactForm = (data) => {
   const errors = []
   
   // 1. HONEYPOT CHECK - Silent bot detection
-  if (detectHoneypot(data)) {
+  if (data.website && data.website.trim() !== '') {
     // Don't show error, just silently reject
     return ['Please try again in a moment.']
   }
   
-  // 2. Rate limiting check (more lenient)
-  const now = Date.now()
-  if (now - lastSubmissionTime < SUBMISSION_COOLDOWN) {
-    const waitTime = Math.ceil((SUBMISSION_COOLDOWN - (now - lastSubmissionTime)) / 1000)
-    return [`Please wait ${waitTime} seconds between submissions.`]
-  }
-  
-  // 3. Daily submission limit (generous)
-  const submissionCount = getSubmissionCount()
-  if (submissionCount >= MAX_DAILY_SUBMISSIONS) {
-    return ['Daily submission limit reached. Please try again tomorrow or contact via LinkedIn.']
-  }
-  
-  // 4. Basic validation (required fields)
+  // 2. BASIC REQUIRED FIELD validation only
   if (!data.name || data.name.trim().length < 2) {
     errors.push('Name must be at least 2 characters long')
   }
@@ -598,21 +558,7 @@ const validateContactForm = (data) => {
     errors.push('Message must be at least 10 characters long')
   }
   
-  // 5. CONSERVATIVE content quality check
-  if (analyzeContentQuality(data)) {
-    // Log for manual review but don't block immediately
-    console.warn('⚠️ Suspicious content detected - manual review recommended:', {
-      name: data.name.substring(0, 10) + '...',
-      email: data.email.split('@')[1] || 'unknown',
-      contentLength: data.message.length,
-      timestamp: new Date().toISOString()
-    })
-    
-    suspiciousCount++
-    if (suspiciousCount > SUSPICIOUS_THRESHOLD) {
-      errors.push('Your message appears to contain promotional content. Please revise and try again.')
-    }
-  }
+  // REMOVED ALL FRONTEND SPAM DETECTION - Backend handles everything now
   
   return errors
 }
