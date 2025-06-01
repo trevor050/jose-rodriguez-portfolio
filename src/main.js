@@ -547,11 +547,6 @@ const validateContactForm = (data) => {
     return ['Your submission could not be processed. Please try again later.']
   }
   
-  // Check reCAPTCHA availability (warn but don't block)
-  if (siteInfo.recaptcha.enabled && !window.grecaptcha) {
-    console.warn('reCAPTCHA not loaded - form may be blocked by Formspree')
-  }
-  
   // Cookie-based submission limit check
   const submissionCount = getSubmissionCount()
   if (submissionCount >= MAX_SUCCESSFUL_SUBMISSIONS) {
@@ -666,20 +661,7 @@ const submitContactForm = async (data) => {
     const FORM_ID = import.meta.env.VITE_CONTACT_FORM || 'mblyrbkg' // fallback to current ID
     const FORMSPREE_ENDPOINT = `https://formspree.io/f/${FORM_ID}`
     
-    // Generate reCAPTCHA token if enabled
-    let recaptchaToken = null
-    if (siteInfo.recaptcha.enabled && window.grecaptcha) {
-      try {
-        recaptchaToken = await window.grecaptcha.execute(siteInfo.recaptcha.siteKey, {
-          action: siteInfo.recaptcha.action
-        })
-      } catch (recaptchaError) {
-        console.warn('reCAPTCHA failed:', recaptchaError)
-        // Continue without reCAPTCHA - let Formspree handle it
-      }
-    }
-    
-    // Prepare form data with reCAPTCHA token
+    // Prepare form data
     const formData = {
       name: data.name.trim(),
       email: data.email.trim().toLowerCase(),
@@ -687,11 +669,6 @@ const submitContactForm = async (data) => {
       message: data.message.trim(),
       _replyto: data.email.trim().toLowerCase(),
       _subject: `Portfolio Contact: ${data.subject.trim()}`
-    }
-    
-    // Add reCAPTCHA token if available
-    if (recaptchaToken) {
-      formData['g-recaptcha-response'] = recaptchaToken
     }
     
     const response = await fetch(FORMSPREE_ENDPOINT, {
@@ -927,7 +904,7 @@ const renderApp = () => {
           <p class="footer-main">${footerText}</p>
           ${keyboardShortcuts}
         </div>
-      </div>
+  </div>
     </footer>
   `
   

@@ -11,7 +11,7 @@ EASY TO UPDATE:
 - Contact information
 - Social media links  
 - Website metadata
-- reCAPTCHA settings
+- Form settings
 */
 
 // Contact Information (Easy to update!)
@@ -81,18 +81,10 @@ export const siteInfo = {
   // Analytics & Tracking (Optional)
   googleAnalytics: "", // Add Google Analytics ID if you want more detailed tracking
   
-  // reCAPTCHA Configuration
-  recaptcha: {
-    siteKey: "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI", // Replace with your real site key
-    enabled: true,
-    action: "contact_form_submit"
-  },
-  
   // Contact Form Settings
   contactForm: {
     maxSubmissionsPerDay: 3,
     enableSpamProtection: true,
-    requireRecaptcha: true,
     formspreeEndpoint: "https://formspree.io/f/mblyrbkg" // Your Formspree endpoint
   }
 }
