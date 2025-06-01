@@ -532,11 +532,12 @@ const validateContactForm = (data) => {
   return errors
 }
 
-// Backend API - Formspree Integration (Replace YOUR_FORM_ID with actual ID)
+// Backend API - Formspree Integration (Uses environment variable)
 const submitContactForm = async (data) => {
   try {
-    // Formspree endpoint - ready to receive contact form submissions
-    const FORMSPREE_ENDPOINT = 'https://formspree.io/f/mblyrbkg'
+    // Get form ID from environment variable (Vite format)
+    const FORM_ID = import.meta.env.VITE_CONTACT_FORM || 'mblyrbkg' // fallback to current ID
+    const FORMSPREE_ENDPOINT = `https://formspree.io/f/${FORM_ID}`
     
     const response = await fetch(FORMSPREE_ENDPOINT, {
       method: 'POST',
