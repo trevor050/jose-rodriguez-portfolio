@@ -449,9 +449,8 @@ const validateContactForm = (data) => {
 // Backend API - Formspree Integration (Replace YOUR_FORM_ID with actual ID)
 const submitContactForm = async (data) => {
   try {
-    // TODO: Replace 'YOUR_FORM_ID' with your actual Formspree form ID
-    // Get this from https://formspree.io after creating your form
-    const FORMSPREE_ENDPOINT = 'https://formspree.io/f/YOUR_FORM_ID'
+    // Formspree endpoint - ready to receive contact form submissions
+    const FORMSPREE_ENDPOINT = 'https://formspree.io/f/mblyrbkg'
     
     const response = await fetch(FORMSPREE_ENDPOINT, {
       method: 'POST',
