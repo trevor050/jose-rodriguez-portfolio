@@ -203,6 +203,9 @@ async function sendEmail({ name, email, subject, message }) {
 
 // PROFESSIONAL SPAM ANALYSIS with SpamScanner + Custom Contact Form Heuristics
 async function analyzeProfessionalSpam({ name, email, subject, message }) {
+  console.log('🔍 === STARTING PROFESSIONAL SPAM ANALYSIS ===')
+  console.log('Input data:', { name, email, subject, messageLength: message.length })
+  
   try {
     // Create a mock email message for SpamScanner
     // SpamScanner expects email format, so we'll construct one
@@ -215,85 +218,205 @@ Content-Type: text/plain; charset=utf-8
 ${message}
 `
 
-    console.log('📧 Analyzing with professional SpamScanner...')
+    console.log('📧 Mock email for SpamScanner:')
+    console.log('---EMAIL START---')
+    console.log(mockEmail)
+    console.log('---EMAIL END---')
+    
+    console.log('🔬 Running SpamScanner professional analysis...')
     
     // Run professional spam analysis
     const scanResult = await scanner.scan(mockEmail)
+    
+    console.log('📊 SpamScanner raw result:', JSON.stringify(scanResult, null, 2))
     
     // SpamScanner provides comprehensive analysis
     const professionalScore = scanResult.is_spam ? 8 : 0 // Convert boolean to our scale
     const spamReasons = scanResult.message ? [scanResult.message] : []
     
-    // Add contact form specific analysis (lightweight custom heuristics)
+    console.log(`🎯 Professional score: ${professionalScore} (is_spam: ${scanResult.is_spam})`)
+    
+    // Add AGGRESSIVE contact form specific analysis
     let customScore = 0
     const customFlags = []
     
-    // Quick contact form specific checks
+    console.log('🛠️ Running aggressive custom analysis...')
+    
+    // Combine all text for analysis
     const allText = `${name} ${subject} ${message}`.toLowerCase()
     const emailDomain = email.split('@')[1]?.toLowerCase() || ''
     
-    // Suspicious domains (moderate scoring since we handled extreme ones in Stage 1)
-    const suspiciousDomains = ['tempmail', 'guerrillamail', 'mailinator', 'yopmail', 'throwaway']
+    console.log('All text for analysis:', allText)
+    console.log('Email domain:', emailDomain)
+    
+    // 1. AGGRESSIVE TROLLING/SPAM DETECTION
+    const aggressiveSpamKeywords = [
+      // Trolling/harassment
+      'kill ya self', 'kill yourself', 'kys', 'kill ya', 'kill you',
+      'hop on fortnite', 'fortnite', 'gaming', 'vro', 'bro',
+      
+      // Obvious spam patterns  
+      'buy now', 'click here', 'free money', 'make money', 'earn cash',
+      'limited time', 'act now', 'guaranteed', 'winner', 'congratulations',
+      'claim your', 'selected', 'bitcoin', 'crypto', 'investment',
+      'work from home', 'business opportunity', 'no experience',
+      
+      // Generic/meaningless content
+      'its dope', 'i love you', 'love this game', 'bye!', 'okay bye',
+      'test message', 'hello world', 'sample text'
+    ]
+    
+    aggressiveSpamKeywords.forEach(keyword => {
+      if (allText.includes(keyword)) {
+        customScore += 4
+        customFlags.push(`Aggressive spam keyword: "${keyword}"`)
+        console.log(`🚨 Found spam keyword: "${keyword}" (+4 points)`)
+      }
+    })
+    
+    // 2. SUSPICIOUS DOMAINS (more aggressive)
+    const suspiciousDomains = [
+      'tempmail', 'guerrillamail', 'mailinator', 'yopmail', 'throwaway',
+      '10minutemail', 'sharklasers', 'trashmail', 'dispostable'
+    ]
     if (suspiciousDomains.some(domain => emailDomain.includes(domain))) {
-      customScore += 3
+      customScore += 5
       customFlags.push(`Temporary email domain: ${emailDomain}`)
+      console.log(`🚨 Suspicious domain: ${emailDomain} (+5 points)`)
     }
     
-    // Very short or generic messages
-    if (message.length < 30) {
-      customScore += 2
-      customFlags.push('Suspiciously short message')
+    // 3. FAKE/NONSENSE NAMES (more aggressive)
+    const nonsenseNames = [
+      'test', 'user', 'admin', 'contact', 'info', 'hello',
+      'why would i tell you', 'not telling', 'nope', 'no name',
+      'anonymous', 'anon', 'none', 'asdf', 'qwerty'
+    ]
+    if (nonsenseNames.some(fake => name.toLowerCase().includes(fake))) {
+      customScore += 4
+      customFlags.push(`Fake/nonsense name: "${name}"`)
+      console.log(`🚨 Fake name detected: "${name}" (+4 points)`)
     }
     
-    // Generic names
-    const genericNames = ['test', 'user', 'admin', 'contact', 'info']
-    if (genericNames.some(generic => name.toLowerCase().includes(generic))) {
-      customScore += 2
-      customFlags.push('Generic name detected')
+    // 4. INAPPROPRIATE/HOSTILE SUBJECTS
+    const hostileSubjects = [
+      'kill', 'die', 'hate you', 'stupid', 'dumb', 'idiot',
+      'test', 'hello', 'hi', 'hey', 'sup', 'yo'
+    ]
+    if (hostileSubjects.some(hostile => subject.toLowerCase().includes(hostile))) {
+      customScore += 4
+      customFlags.push(`Hostile/inappropriate subject: "${subject}"`)
+      console.log(`🚨 Hostile subject: "${subject}" (+4 points)`)
     }
     
-    // Excessive special characters or gibberish
-    if (/(.)\1{5,}/gi.test(allText)) {
+    // 5. LOW QUALITY CONTENT (aggressive scoring)
+    
+    // Very short messages
+    if (message.length < 50) {
+      customScore += 3
+      customFlags.push(`Very short message (${message.length} chars)`)
+      console.log(`🚨 Short message: ${message.length} chars (+3 points)`)
+    }
+    
+    // Nonsense/gaming content
+    const gamingKeywords = ['fortnite', 'minecraft', 'roblox', 'cod', 'apex', 'valorant']
+    if (gamingKeywords.some(game => allText.includes(game))) {
+      customScore += 3
+      customFlags.push('Gaming-related content (likely spam)')
+      console.log(`🚨 Gaming content detected (+3 points)`)
+    }
+    
+    // Excessive slang/informal language
+    const slangWords = ['vro', 'bro', 'yo', 'sup', 'lit', 'dope', 'fire', 'lowkey', 'highkey']
+    const slangCount = slangWords.filter(slang => allText.includes(slang)).length
+    if (slangCount >= 2) {
+      customScore += 3
+      customFlags.push(`Excessive slang (${slangCount} terms)`)
+      console.log(`🚨 Excessive slang: ${slangCount} terms (+3 points)`)
+    }
+    
+    // Gibberish or repeated characters
+    if (/(.)\1{4,}/gi.test(allText)) {
       customScore += 3
       customFlags.push('Repeated character pattern (gibberish)')
+      console.log(`🚨 Gibberish pattern detected (+3 points)`)
     }
     
-    // Positive indicators (reduce custom score)
-    const trustedDomains = ['gmail.com', 'outlook.com', 'yahoo.com', 'hotmail.com']
-    const eduGovDomains = ['.edu', '.gov', '.ac.uk']
+    // 6. FAKE EMAIL PATTERNS
+    const fakeEmailPatterns = [
+      'no@no.com', 'nope@nope.com', 'fake@fake.com', 'test@test.com',
+      'spam@spam.com', 'notreal@notreal.com'
+    ]
+    if (fakeEmailPatterns.includes(email.toLowerCase())) {
+      customScore += 5
+      customFlags.push(`Obvious fake email: ${email}`)
+      console.log(`🚨 Fake email pattern: ${email} (+5 points)`)
+    }
+    
+    // Generic numbered emails
+    if (/\d{4,}/.test(email) && !emailDomain.includes('gmail')) {
+      customScore += 2
+      customFlags.push('Email contains many numbers (suspicious)')
+      console.log(`🚨 Suspicious email numbers (+2 points)`)
+    }
+    
+    // 7. POSITIVE INDICATORS (reduce custom score)
+    console.log('🔍 Checking positive indicators...')
+    
+    const trustedDomains = ['gmail.com', 'outlook.com', 'yahoo.com', 'hotmail.com', 'icloud.com']
+    const eduGovDomains = ['.edu', '.gov', '.ac.uk', '.edu.au']
     
     if (trustedDomains.includes(emailDomain)) {
       customScore = Math.max(0, customScore - 1)
       customFlags.push('Trusted email provider')
+      console.log(`✅ Trusted domain: ${emailDomain} (-1 point)`)
     }
     
     if (eduGovDomains.some(domain => emailDomain.includes(domain))) {
-      customScore = Math.max(0, customScore - 2)
+      customScore = Math.max(0, customScore - 3)
       customFlags.push('Educational/government domain')
+      console.log(`✅ Educational/gov domain: ${emailDomain} (-3 points)`)
     }
     
-    // Engineering/academic keywords
+    // Professional/academic keywords
     const legitimateKeywords = [
       'engineering', 'college', 'university', 'student', 'application',
-      'mechanical', 'portfolio', 'project', 'internship', 'academic'
+      'mechanical', 'portfolio', 'project', 'internship', 'academic',
+      'job', 'career', 'position', 'opportunity', 'collaboration',
+      'research', 'thesis', 'degree', 'graduation', 'professor'
     ]
-    if (legitimateKeywords.some(keyword => allText.includes(keyword))) {
-      customScore = Math.max(0, customScore - 1)
-      customFlags.push('Contains academic/engineering keywords')
+    const legitCount = legitimateKeywords.filter(keyword => allText.includes(keyword)).length
+    if (legitCount > 0) {
+      const reduction = Math.min(3, legitCount)
+      customScore = Math.max(0, customScore - reduction)
+      customFlags.push(`Contains ${legitCount} academic/professional keywords`)
+      console.log(`✅ Professional keywords: ${legitCount} found (-${reduction} points)`)
     }
     
-    // Combine scores (professional takes priority)
+    // Well-structured content
+    const sentences = message.split(/[.!?]+/).filter(s => s.trim().length > 15)
+    if (sentences.length >= 3 && message.length > 150) {
+      customScore = Math.max(0, customScore - 2)
+      customFlags.push('Well-structured message')
+      console.log(`✅ Well-structured content (-2 points)`)
+    }
+    
+    console.log(`📊 Custom analysis score: ${customScore}`)
+    console.log(`📋 Custom flags:`, customFlags)
+    
+    // Combine scores (take the higher of the two)
     const combinedScore = Math.max(professionalScore, customScore)
     const allFlags = [...spamReasons, ...customFlags]
     
-    // Determine final classification
-    const isSpam = scanResult.is_spam || customScore >= 4
+    console.log(`🎯 Combined score: ${combinedScore} (professional: ${professionalScore}, custom: ${customScore})`)
+    
+    // Determine final classification (more aggressive threshold)
+    const isSpam = scanResult.is_spam || customScore >= 3  // Lowered threshold from 4 to 3
     const riskLevel = combinedScore >= 8 ? 'CRITICAL' :
                      combinedScore >= 6 ? 'HIGH' :
                      combinedScore >= 4 ? 'MEDIUM' :
                      combinedScore >= 2 ? 'LOW' : 'CLEAN'
 
-    return {
+    const finalResult = {
       score: combinedScore,
       isSpam,
       riskLevel,
@@ -302,7 +425,8 @@ ${message}
         isSpam: scanResult.is_spam,
         message: scanResult.message,
         // Include other SpamScanner details if available
-        results: scanResult.results || null
+        results: scanResult.results || null,
+        rawScanResult: scanResult // Include full result for debugging
       },
       customAnalysis: {
         score: customScore,
@@ -314,11 +438,17 @@ ${message}
                  'Appears legitimate'
     }
     
+    console.log(`🏁 Final analysis result:`, JSON.stringify(finalResult, null, 2))
+    console.log('🔍 === SPAM ANALYSIS COMPLETE ===')
+    
+    return finalResult
+    
   } catch (error) {
     console.error('❌ Professional spam analysis failed:', error)
+    console.error('Full error stack:', error.stack)
     
-    // Fallback to basic custom analysis if SpamScanner fails
-    console.log('↪️ Falling back to basic custom analysis...')
+    // Fallback to aggressive custom analysis if SpamScanner fails
+    console.log('↪️ Falling back to aggressive custom analysis...')
     
     let fallbackScore = 0
     const fallbackFlags = []
@@ -326,39 +456,53 @@ ${message}
     const allText = `${name} ${subject} ${message}`.toLowerCase()
     const emailDomain = email.split('@')[1]?.toLowerCase() || ''
     
-    // Basic fallback checks
-    const suspiciousDomains = ['tempmail', 'guerrillamail', 'mailinator']
-    if (suspiciousDomains.some(domain => emailDomain.includes(domain))) {
-      fallbackScore += 4
-      fallbackFlags.push(`Suspicious domain: ${emailDomain}`)
-    }
+    console.log('Fallback analysis for:', { name, email, subject, messagePreview: message.substring(0, 100) })
     
-    if (message.length < 20) {
-      fallbackScore += 3
-      fallbackFlags.push('Very short message')
-    }
+    // Aggressive fallback checks
+    const aggressiveKeywords = [
+      'kill', 'fortnite', 'gaming', 'vro', 'bro', 'yo', 'sup',
+      'buy now', 'click here', 'free money', 'test', 'hello'
+    ]
     
-    const spamKeywords = ['buy now', 'click here', 'free money', 'make money']
-    spamKeywords.forEach(keyword => {
+    aggressiveKeywords.forEach(keyword => {
       if (allText.includes(keyword)) {
         fallbackScore += 4
-        fallbackFlags.push(`Spam keyword: "${keyword}"`)
+        fallbackFlags.push(`Fallback spam keyword: "${keyword}"`)
+        console.log(`🚨 Fallback found: "${keyword}" (+4 points)`)
       }
     })
     
-    const isSpam = fallbackScore >= 4
+    // Check for fake names/emails
+    if (name.toLowerCase().includes('why would') || email.includes('no@no')) {
+      fallbackScore += 6
+      fallbackFlags.push('Obviously fake name/email')
+      console.log(`🚨 Fake identity detected (+6 points)`)
+    }
     
-    return {
+    // Short messages
+    if (message.length < 30) {
+      fallbackScore += 4
+      fallbackFlags.push(`Very short message (${message.length} chars)`)
+      console.log(`🚨 Short message: ${message.length} chars (+4 points)`)
+    }
+    
+    const isSpam = fallbackScore >= 3
+    
+    const fallbackResult = {
       score: fallbackScore,
       isSpam,
-      riskLevel: fallbackScore >= 6 ? 'HIGH' : fallbackScore >= 4 ? 'MEDIUM' : 'LOW',
+      riskLevel: fallbackScore >= 8 ? 'CRITICAL' : fallbackScore >= 6 ? 'HIGH' : fallbackScore >= 4 ? 'MEDIUM' : 'LOW',
       flags: fallbackFlags,
       professionalAnalysis: null,
       customAnalysis: { score: fallbackScore, flags: fallbackFlags },
       recommendation: isSpam ? 'Route to spam channel' : 'Route to main channel',
-      confidence: 'Fallback analysis (professional scanner unavailable)',
+      confidence: 'Fallback analysis (professional scanner failed)',
       error: error.message
     }
+    
+    console.log(`🏁 Fallback result:`, JSON.stringify(fallbackResult, null, 2))
+    
+    return fallbackResult
   }
 }
 
@@ -406,17 +550,36 @@ async function sendViaDiscord({ name, email, subject, message, spamAnalysis, cha
           inline: false
         },
         {
-          name: "🔍 Custom Spam Analysis",
+          name: "🔬 Professional SpamScanner",
+          value: spamAnalysis.professionalAnalysis ? `
+**Status:** ${spamAnalysis.professionalAnalysis.isSpam ? '🚨 SPAM DETECTED' : '✅ Clean'}
+**SpamScanner Message:** ${spamAnalysis.professionalAnalysis.message || 'No specific message'}
+**Raw Detection:** ${JSON.stringify(spamAnalysis.professionalAnalysis.rawScanResult?.is_spam || false)}
+          `.trim() : '❌ Scanner Failed',
+          inline: true
+        },
+        {
+          name: "🛠️ Custom Analysis",
           value: `
-**Status:** ${spamAnalysis.confidence}
+**Score:** ${spamAnalysis.customAnalysis?.score || 0}/12
+**Top Flags:** ${spamAnalysis.customAnalysis?.flags?.slice(0, 2).join(', ') || 'None'}
+**Threshold:** ${spamAnalysis.customAnalysis?.score >= 3 ? '🚨 Above threshold (3+)' : '✅ Below threshold'}
+          `.trim(),
+          inline: true
+        },
+        {
+          name: "🔍 Detailed Analysis",
+          value: `
+**Final Confidence:** ${spamAnalysis.confidence}
 **Action:** ${spamAnalysis.recommendation}
-**Flags:** ${spamAnalysis.flags.length > 0 ? spamAnalysis.flags.slice(0, 3).join(', ') + (spamAnalysis.flags.length > 3 ? '...' : '') : 'None detected'}
+**All Flags (${spamAnalysis.flags.length}):** ${spamAnalysis.flags.length > 0 ? spamAnalysis.flags.slice(0, 3).join(', ') + (spamAnalysis.flags.length > 3 ? `... (+${spamAnalysis.flags.length - 3} more)` : '') : 'None detected'}
+**Error:** ${spamAnalysis.error || 'None'}
           `.trim(),
           inline: false
         }
       ],
       footer: {
-        text: `Jose Rodriguez Portfolio • ${new Date().toLocaleString()} • ${channelType} Channel • Custom Filter: ${spamAnalysis.score}/12`
+        text: `Jose Rodriguez Portfolio • ${new Date().toLocaleString()} • ${channelType} Channel • Professional: ${spamAnalysis.professionalAnalysis?.isSpam ? 'SPAM' : 'CLEAN'} | Custom: ${spamAnalysis.customAnalysis?.score || 0}/12`
       },
       timestamp: new Date().toISOString()
     }
@@ -430,7 +593,7 @@ async function sendViaDiscord({ name, email, subject, message, spamAnalysis, cha
       },
       body: JSON.stringify({
         content: channelType === 'SPAM' ? 
-          `🚨 **Potential spam detected** (Score: ${spamAnalysis.score}/12)` :
+          `🚨 **Potential spam detected** (Combined: ${spamAnalysis.score}/12, Professional: ${spamAnalysis.professionalAnalysis?.isSpam ? 'SPAM' : 'CLEAN'}, Custom: ${spamAnalysis.customAnalysis?.score || 0}/12)` :
           "📬 **New contact form submission!**",
         embeds: [embed],
         username: "Portfolio Bot"
