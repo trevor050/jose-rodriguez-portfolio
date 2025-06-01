@@ -117,26 +117,33 @@ export default async function handler(req, res) {
 // EMAIL SENDING FUNCTION - Handle email service suspensions gracefully
 async function sendEmail({ name, email, subject, message }) {
   
-  // OPTION 1: SendGrid (if available)
+  // OPTION 1: Discord Webhook (instant notifications, zero signup drama)
+  if (process.env.DISCORD_WEBHOOK_URL) {
+    console.log('Attempting Discord webhook...')
+    const discordSent = await sendViaDiscord({ name, email, subject, message })
+    if (discordSent) return true
+  }
+  
+  // OPTION 2: SendGrid (if available)
   if (process.env.SENDGRID_API_KEY) {
     console.log('Attempting SendGrid...')
     return await sendViaSendGrid({ name, email, subject, message })
   }
   
-  // OPTION 2: Resend (if available)
+  // OPTION 3: Resend (if available)
   if (process.env.RESEND_API_KEY) {
     console.log('Attempting Resend...')
     return await sendViaResend({ name, email, subject, message })
   }
   
-  // OPTION 3: Gmail SMTP (if available)
+  // OPTION 4: Gmail SMTP (if available)
   if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
     console.log('Attempting Gmail SMTP...')
     return await sendViaGmail({ name, email, subject, message })
   }
   
   // No email service configured - log everything for manual follow-up
-  console.log('⚠️ No email service configured. Contact details logged for manual outreach.')
+  console.log('⚠️ No notification service configured. Contact details logged for manual outreach.')
   console.log('📋 Complete contact form submission:')
   console.log(`Name: ${name}`)
   console.log(`Email: ${email}`)
@@ -147,6 +154,67 @@ async function sendEmail({ name, email, subject, message }) {
   
   // Return false to trigger the manual logging path
   return false
+}
+
+// Discord Webhook implementation (SECURE - URL hidden on backend)
+async function sendViaDiscord({ name, email, subject, message }) {
+  try {
+    const embed = {
+      title: "🔧 New Portfolio Contact!",
+      color: 0x007ACC, // Nice blue color
+      fields: [
+        {
+          name: "👤 Name",
+          value: name,
+          inline: true
+        },
+        {
+          name: "📧 Email", 
+          value: email,
+          inline: true
+        },
+        {
+          name: "📋 Subject",
+          value: subject,
+          inline: false
+        },
+        {
+          name: "💬 Message",
+          value: message.length > 1000 ? message.substring(0, 1000) + "..." : message,
+          inline: false
+        }
+      ],
+      footer: {
+        text: `Jose Rodriguez Portfolio • ${new Date().toLocaleString()}`
+      },
+      timestamp: new Date().toISOString()
+    }
+
+    const response = await fetch(process.env.DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        content: "📬 **New contact form submission!**",
+        embeds: [embed],
+        username: "Portfolio Bot",
+        avatar_url: "https://cdn.discordapp.com/emojis/🔧.png" // Optional bot avatar
+      })
+    })
+
+    if (response.ok) {
+      console.log('✅ Discord notification sent successfully')
+      return true
+    } else {
+      console.error('Discord webhook failed:', response.status, response.statusText)
+      return false
+    }
+
+  } catch (error) {
+    console.error('Discord webhook error:', error)
+    return false
+  }
 }
 
 // SendGrid implementation
