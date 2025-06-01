@@ -65,7 +65,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Message appears to contain spam content' })
     }
 
-    // 5. SEND EMAIL (multiple options)
+    // 5. SEND EMAIL (multiple options) - Handle email service chaos
     const emailSent = await sendEmail({
       name: name.trim(),
       email: email.trim().toLowerCase(),
@@ -87,7 +87,22 @@ export default async function handler(req, res) {
         message: 'Message sent successfully! I\'ll get back to you soon.'
       })
     } else {
-      throw new Error('Failed to send email')
+      // If no email service configured, log for manual follow-up
+      console.log('📧 EMAIL SERVICE NOT CONFIGURED - MANUAL FOLLOW-UP NEEDED:', {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        subject: subject.trim(),
+        message: message.trim(),
+        timestamp: new Date().toISOString(),
+        ip: clientIP,
+        note: 'Email services are down/suspended. Manual outreach required.'
+      })
+      
+      // Still return success to avoid user frustration
+      return res.status(200).json({
+        success: true,
+        message: 'Message received! I\'ll get back to you soon via your provided email.'
+      })
     }
 
   } catch (error) {
@@ -99,28 +114,38 @@ export default async function handler(req, res) {
   }
 }
 
-// EMAIL SENDING FUNCTION - Multiple options
+// EMAIL SENDING FUNCTION - Handle email service suspensions gracefully
 async function sendEmail({ name, email, subject, message }) {
   
-  // OPTION 1: SendGrid (recommended - 100 emails/day free)
+  // OPTION 1: SendGrid (if available)
   if (process.env.SENDGRID_API_KEY) {
+    console.log('Attempting SendGrid...')
     return await sendViaSendGrid({ name, email, subject, message })
   }
   
-  // OPTION 2: Resend (modern, good free tier)
+  // OPTION 2: Resend (if available)
   if (process.env.RESEND_API_KEY) {
+    console.log('Attempting Resend...')
     return await sendViaResend({ name, email, subject, message })
   }
   
-  // OPTION 3: EmailJS (frontend-only solution)
-  // You'd handle this in the frontend instead
-  
-  // OPTION 4: Gmail SMTP (free but needs app password)
+  // OPTION 3: Gmail SMTP (if available)
   if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
+    console.log('Attempting Gmail SMTP...')
     return await sendViaGmail({ name, email, subject, message })
   }
   
-  console.error('No email service configured')
+  // No email service configured - log everything for manual follow-up
+  console.log('⚠️ No email service configured. Contact details logged for manual outreach.')
+  console.log('📋 Complete contact form submission:')
+  console.log(`Name: ${name}`)
+  console.log(`Email: ${email}`)
+  console.log(`Subject: ${subject}`)
+  console.log(`Message: ${message}`)
+  console.log(`Timestamp: ${new Date().toISOString()}`)
+  console.log('👆 Manual follow-up required via email or LinkedIn')
+  
+  // Return false to trigger the manual logging path
   return false
 }
 

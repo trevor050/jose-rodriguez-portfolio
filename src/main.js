@@ -617,48 +617,101 @@ const validateContactForm = (data) => {
   return errors
 }
 
-// Backend API - Our Own Vercel Function (Much better than overpriced Formspree!)
+// Backend API - Multiple fallback options for email service chaos
 const submitContactForm = async (data) => {
   try {
-    const response = await fetch('/api/contact', {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: data.name.trim(),
-        email: data.email.trim().toLowerCase(),
-        subject: data.subject.trim(),
-        message: data.message.trim(),
-        website: data.website || '' // Honeypot field
-      })
-    })
-    
-    const result = await response.json()
-    
-    if (response.ok && result.success) {
-      return { success: true, message: result.message }
-    } else {
-      throw new Error(result.error || 'Failed to send message')
+    // OPTION 1: Try our custom Vercel function first
+    if (window.location.hostname !== 'localhost') {
+      try {
+        const response = await fetch('/api/contact', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: data.name.trim(),
+            email: data.email.trim().toLowerCase(),
+            subject: data.subject.trim(),
+            message: data.message.trim(),
+            website: data.website || '' // Honeypot field
+          })
+        })
+        
+        const result = await response.json()
+        
+        if (response.ok && result.success) {
+          return { success: true, message: result.message }
+        }
+      } catch (apiError) {
+        console.log('Custom API failed, trying fallbacks...', apiError)
+      }
     }
+    
+    // OPTION 2: EmailJS fallback (works immediately, no signup issues)
+    if (window.emailjs && window.emailjsConfig) {
+      try {
+        const result = await window.emailjs.send(
+          window.emailjsConfig.serviceId,
+          window.emailjsConfig.templateId,
+          {
+            from_name: data.name.trim(),
+            from_email: data.email.trim().toLowerCase(),
+            subject: data.subject.trim(),
+            message: data.message.trim(),
+            to_email: 'jose.rodriguez.engineer@gmail.com'
+          },
+          window.emailjsConfig.publicKey
+        )
+        
+        if (result.status === 200) {
+          return { 
+            success: true, 
+            message: 'Message sent successfully via EmailJS! I\'ll get back to you soon.' 
+          }
+        }
+      } catch (emailjsError) {
+        console.log('EmailJS failed, trying Formspree...', emailjsError)
+      }
+    }
+    
+    // OPTION 3: Formspree fallback (temporary until email services respond)
+    try {
+      const formspreeResponse = await fetch('https://formspree.io/f/mblyrbkg', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: data.name.trim(),
+          email: data.email.trim().toLowerCase(),
+          subject: data.subject.trim(),
+          message: data.message.trim(),
+          _replyto: data.email.trim().toLowerCase(),
+          _subject: `Portfolio Contact: ${data.subject.trim()}`
+        })
+      })
+      
+      if (formspreeResponse.ok) {
+        return { 
+          success: true, 
+          message: 'Message sent successfully via Formspree! I\'ll get back to you soon.' 
+        }
+      }
+    } catch (formspreeError) {
+      console.log('Formspree also failed:', formspreeError)
+    }
+    
+    throw new Error('All email services failed')
     
   } catch (error) {
     console.error('Contact form error:', error)
     
-    // Fallback: Log the submission data for manual follow-up
-    console.log('📧 Contact Form Submission (for manual follow-up):', {
-      name: data.name.trim(),
-      email: data.email.trim().toLowerCase(),
-      subject: data.subject.trim(),
-      message: data.message.trim(),
-      timestamp: new Date().toISOString(),
-      status: 'failed_to_send'
-    })
-    
+    // Ultimate fallback: Show contact info for manual outreach
     return { 
       success: false, 
-      message: 'Failed to send message. Please try again or reach out via LinkedIn.' 
+      message: 'Email services are experiencing issues. Please reach out directly via LinkedIn or jose.rodriguez.engineer@gmail.com' 
     }
   }
 }

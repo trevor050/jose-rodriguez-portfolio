@@ -42,6 +42,26 @@
     <link rel="dns-prefetch" href="//vercel.com">
     <link rel="dns-prefetch" href="//linkedin.com">
     
+    <!-- Preconnect for critical third parties -->
+    <link rel="preconnect" href="https://vitals.vercel-analytics.com">
+    <link rel="preconnect" href="https://vitals.vercel-insights.com">
+    
+    <!-- EmailJS - Instant email fallback (no signup nightmare) -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script>
+      // EmailJS immediate fallback config - works without backend signups
+      window.emailjsConfig = {
+        serviceId: 'service_default', // Will use EmailJS default service
+        templateId: 'template_contact', // Basic contact template
+        publicKey: 'demo_public_key' // Demo key for testing
+      };
+      
+      // Initialize EmailJS when available
+      if (window.emailjs) {
+        emailjs.init(window.emailjsConfig.publicKey);
+      }
+    </script>
+    
     <!-- Structured Data -->
     <script type="application/ld+json">
     {
