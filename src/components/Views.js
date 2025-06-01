@@ -174,8 +174,7 @@ export const renderContact = () => {
               required 
               minlength="2"
               maxlength="100"
-              pattern="^[a-zA-Z\s\-\.\']+$"
-              title="Please enter a valid name (letters, spaces, hyphens, apostrophes only)"
+              title="Please enter a valid name"
               placeholder="Your full name"
               autocomplete="name"
               aria-describedby="name-help"
@@ -191,7 +190,6 @@ export const renderContact = () => {
               name="email" 
               required 
               maxlength="254"
-              pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
               title="Please enter a valid email address"
               placeholder="your.email@domain.com"
               autocomplete="email"
