@@ -53,18 +53,20 @@ let submissionAttempts = 0
 let lastSubmissionTime = 0
 let shadowBanned = false
 const SUBMISSION_COOLDOWN = 30000 // 30 seconds between submissions
-const MAX_ATTEMPTS = 10 // Shadowban after 10 failed attempts
+const MAX_ATTEMPTS = 15 // Increased threshold before shadowban
+const MAX_SUCCESSFUL_SUBMISSIONS = 3 // Cookie-based limit
 
-// Profanity and spam word lists (basic list - can be expanded)
+// Much more targeted profanity list (only truly inappropriate words)
 const PROFANITY_LIST = [
-  'damn', 'hell', 'shit', 'fuck', 'bitch', 'ass', 'bastard', 'crap',
-  'piss', 'slut', 'whore', 'cock', 'dick', 'pussy', 'tits', 'boobs'
+  'fuck', 'shit', 'bitch', 'whore', 'slut', 'cunt', 'cock', 'pussy',
+  'nigger', 'faggot', 'retard', 'nazi', 'kill yourself', 'kys'
 ]
 
+// Reduced spam keywords (only obvious promotional spam)
 const SPAM_KEYWORDS = [
-  'buy now', 'click here', 'free money', 'make money', 'viagra', 'casino',
-  'lottery', 'winner', 'congratulations', 'urgent', 'limited time', 'act now',
-  'crypto', 'bitcoin', 'investment', 'roi', 'guarantee', 'risk free'
+  'buy now', 'click here', 'free money', 'make money fast', 'viagra', 
+  'casino online', 'lottery winner', 'congratulations winner', 
+  'crypto investment', 'get rich quick', 'earn $$$'
 ]
 
 // Valid TLD list (major ones)
@@ -73,6 +75,41 @@ const VALID_TLDS = [
   'tech', 'dev', 'app', 'blog', 'site', 'online', 'store', 'shop',
   'us', 'uk', 'ca', 'au', 'de', 'fr', 'jp', 'cn', 'in', 'br', 'mx'
 ]
+
+// Cookie-based submission tracking
+const getSubmissionCount = () => {
+  try {
+    const cookie = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('sub_count='))
+    
+    if (cookie) {
+      const encoded = cookie.split('=')[1]
+      const decoded = atob(encoded)
+      return parseInt(decoded) || 0
+    }
+    return 0
+  } catch (error) {
+    return 0
+  }
+}
+
+const incrementSubmissionCount = () => {
+  try {
+    const currentCount = getSubmissionCount()
+    const newCount = currentCount + 1
+    const encoded = btoa(newCount.toString())
+    
+    // Set cookie to expire in 24 hours
+    const expiry = new Date()
+    expiry.setTime(expiry.getTime() + (24 * 60 * 60 * 1000))
+    document.cookie = `sub_count=${encoded}; expires=${expiry.toUTCString()}; path=/; SameSite=Strict`
+    
+    return newCount
+  } catch (error) {
+    return 0
+  }
+}
 
 /*
 ===========================================
@@ -418,13 +455,19 @@ const closeProjectModal = () => {
   }
 }
 
-// Enhanced contact form validation with anti-spam measures
+// Enhanced contact form validation with smart anti-spam measures
 const validateContactForm = (data) => {
   const errors = []
   
   // Check if shadowbanned
   if (shadowBanned) {
     return ['Your submission could not be processed. Please try again later.']
+  }
+  
+  // Cookie-based submission limit check
+  const submissionCount = getSubmissionCount()
+  if (submissionCount >= MAX_SUCCESSFUL_SUBMISSIONS) {
+    return ['Maximum number of submissions reached for today. Please try again tomorrow.']
   }
   
   // Rate limiting check
@@ -453,13 +496,15 @@ const validateContactForm = (data) => {
     errors.push('Email address is too long')
   }
   
-  // Check for valid TLD
-  if (data.email) {
+  // Check for valid TLD (but more lenient)
+  if (data.email && emailRegex.test(data.email)) {
     const emailParts = data.email.toLowerCase().split('@')
     if (emailParts.length === 2) {
       const domain = emailParts[1]
       const tld = domain.split('.').pop()
-      if (!VALID_TLDS.includes(tld)) {
+      // Only block obviously fake TLDs
+      const fakeTlds = ['tk', 'ml', 'ga', 'cf', 'xxx', 'test']
+      if (fakeTlds.includes(tld)) {
         errors.push('Please use a valid email domain')
       }
     }
@@ -481,53 +526,34 @@ const validateContactForm = (data) => {
     errors.push('Message must be less than 2000 characters')
   }
   
-  // Profanity filter
+  // Smart profanity filter (whole word matching only)
   const allText = (data.name + ' ' + data.subject + ' ' + data.message).toLowerCase()
-  const foundProfanity = PROFANITY_LIST.some(word => allText.includes(word))
+  const words = allText.split(/\s+/)
+  const foundProfanity = PROFANITY_LIST.some(badWord => 
+    words.some(word => word === badWord || word === badWord + 's' || word === badWord + 'ing')
+  )
   if (foundProfanity) {
     errors.push('Message contains inappropriate language')
   }
   
-  // Spam keyword detection
+  // Relaxed spam keyword detection (only exact phrase matches)
   const foundSpam = SPAM_KEYWORDS.some(keyword => allText.includes(keyword.toLowerCase()))
   if (foundSpam) {
     errors.push('Message appears to contain promotional content')
   }
   
-  // Suspicious pattern detection
-  if (/https?:\/\/[^\s]+/gi.test(allText)) {
-    errors.push('Messages cannot contain URLs for security reasons')
+  // Only block obvious spam URLs (not mentions of websites)
+  if (/https?:\/\/[^\s]+\.(tk|ml|ga|cf|bit\.ly|tinyurl)/gi.test(allText)) {
+    errors.push('Message contains suspicious links')
   }
   
-  // Repeated character spam detection
-  if (/(.)\1{4,}/gi.test(allText)) {
-    errors.push('Message contains invalid repeated characters')
+  // Relaxed repeated character detection (7+ repetitions instead of 5+)
+  if (/(.)\1{6,}/gi.test(allText)) {
+    errors.push('Message contains excessive repeated characters')
   }
   
-  // All caps detection (more than 50% caps)
-  const capsCount = (allText.match(/[A-Z]/g) || []).length
-  const letterCount = (allText.match(/[A-Za-z]/g) || []).length
-  if (letterCount > 10 && capsCount / letterCount > 0.5) {
-    errors.push('Please avoid excessive use of capital letters')
-  }
-  
-  // Number spam detection (more than 30% numbers)
-  const numberCount = (allText.match(/[0-9]/g) || []).length
-  if (allText.length > 20 && numberCount / allText.length > 0.3) {
-    errors.push('Message contains excessive numbers')
-  }
-  
-  // Special character spam detection
-  const specialCount = (allText.match(/[!@#$%^&*()+={}[\]|\\:";'<>?,./]/g) || []).length
-  if (allText.length > 20 && specialCount / allText.length > 0.2) {
-    errors.push('Message contains excessive special characters')
-  }
-  
-  // Gibberish detection (basic - lack of vowels)
-  const vowelCount = (allText.match(/[aeiou]/gi) || []).length
-  if (letterCount > 20 && vowelCount / letterCount < 0.15) {
-    errors.push('Message appears to contain invalid text')
-  }
+  // Removed overly aggressive caps, number, and special character detection
+  // Removed gibberish detection as it was too aggressive
   
   return errors
 }
@@ -634,9 +660,10 @@ const handleContactForm = async (e) => {
     const result = await submitContactForm(data)
     
     if (result.success) {
-      // Update rate limiting
+      // Update rate limiting and submission tracking
       lastSubmissionTime = Date.now()
       submissionAttempts = 0 // Reset on successful submission
+      incrementSubmissionCount() // Track successful submission in cookie
       
       // Show success state
       btn.innerHTML = '<span>Message Sent Successfully!</span>'
