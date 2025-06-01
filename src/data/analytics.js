@@ -97,8 +97,8 @@ export const initScrollTracking = () => {
         trackedMilestones.add(milestone)
         
         // Track scroll milestone (you can import analytics in main.js and use this)
-        if (window.analytics) {
-          window.analytics.track('Scroll Milestone', {
+        if (window.track) {
+          window.track('Scroll Milestone', {
             percentage: milestone,
             timestamp: new Date().toISOString(),
             page: window.location.pathname
@@ -127,8 +127,8 @@ export const initSessionTracking = () => {
   window.addEventListener('beforeunload', () => {
     const sessionDuration = Date.now() - sessionStart
     
-    if (window.analytics) {
-      window.analytics.track('Session Ended', {
+    if (window.track) {
+      window.track('Session Ended', {
         duration: sessionDuration,
         pageViews: pageViews,
         maxScrollDepth: window.scrollTracker?.getMaxScroll() || 0,

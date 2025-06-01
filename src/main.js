@@ -1,8 +1,8 @@
 import './style.css'
 import { renderProjects, renderAbout, renderContact } from './components/Views.js'
 import { renderProjectModal } from './components/ProjectCard.js'
-import { analytics } from '@vercel/analytics'
-import { speedInsights } from '@vercel/speed-insights'
+import { track, inject } from '@vercel/analytics'
+import { injectSpeedInsights } from '@vercel/speed-insights'
 import { 
   ANALYTICS_CONFIG, 
   trackPerformance, 
@@ -270,7 +270,7 @@ const filterProjects = (category) => {
   const resetButton = document.querySelector('.filter-reset')
   
   // Track filter usage analytics
-  analytics.track('Project Filter Used', {
+  track('Project Filter Used', {
     category: category,
     previousFilters: [...currentFilters],
     timestamp: new Date().toISOString(),
@@ -404,7 +404,7 @@ const toggleTheme = () => {
   localStorage.setItem('theme', isDarkMode ? 'dark' : 'light')
   
   // Track theme change analytics
-  analytics.track('Theme Changed', {
+  track('Theme Changed', {
     newTheme: isDarkMode ? 'dark' : 'light',
     timestamp: new Date().toISOString(),
     device: isMobile() ? 'mobile' : 'desktop'
@@ -456,7 +456,7 @@ const handleNavigation = (view) => {
   if (view === currentView) return
   
   // Track navigation analytics
-  analytics.track('Page Navigation', {
+  track('Page Navigation', {
     from: currentView,
     to: view,
     timestamp: new Date().toISOString(),
@@ -500,7 +500,7 @@ const handleProjectClick = (projectId) => {
   const project = portfolioData.projects.find(p => p.id === parseInt(projectId))
   if (project) {
     // Track project view analytics
-    analytics.track('Project Viewed', {
+    track('Project Viewed', {
       projectId: project.id,
       projectTitle: project.title,
       category: project.category,
@@ -768,7 +768,7 @@ const handleContactForm = async (e) => {
       logFormInteraction('success', data) // Use real success logging
       
       // Track successful contact form submission
-      analytics.track('Contact Form Submitted', {
+      track('Contact Form Submitted', {
         timestamp: new Date().toISOString(),
         nameLength: data.name.length,
         emailDomain: data.email.split('@')[1] || 'unknown',
@@ -974,7 +974,7 @@ const addEventListeners = () => {
     // Add enhanced click tracking and fallback
     professionalNetworkLink.addEventListener('click', (e) => {
       // Track LinkedIn click analytics
-      analytics.track('LinkedIn Profile Clicked', {
+      track('LinkedIn Profile Clicked', {
         timestamp: new Date().toISOString(),
         device: isMobile() ? 'mobile' : 'desktop',
         referrer: document.referrer || 'direct'
@@ -1007,19 +1007,19 @@ const init = () => {
   // Initialize comprehensive analytics tracking
   const performanceData = trackPerformance()
   
-  // Initialize Vercel Analytics and Speed Insights
-  analytics.track('Portfolio Loaded', {
+  // Initialize Vercel Analytics
+  inject()
+  
+  // Initialize Speed Insights
+  injectSpeedInsights()
+  
+  // Track initial portfolio load
+  track('Portfolio Loaded', {
     timestamp: new Date().toISOString(),
     userAgent: navigator.userAgent.substring(0, 50),
     viewport: `${window.innerWidth}x${window.innerHeight}`,
     theme: isDarkMode ? 'dark' : 'light',
     ...performanceData,
-    ...ANALYTICS_CONFIG.customDimensions
-  })
-  
-  speedInsights.track('Page Load', {
-    page: 'portfolio',
-    loadTime: performance.now(),
     ...ANALYTICS_CONFIG.customDimensions
   })
   
@@ -1033,7 +1033,7 @@ const init = () => {
   }
   
   // Make analytics available globally for other functions
-  window.analytics = analytics
+  window.track = track
   
   // Set initial theme from localStorage
   const savedTheme = localStorage.getItem('theme')
