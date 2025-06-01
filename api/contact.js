@@ -1,5 +1,12 @@
 // Vercel Serverless Function for Contact Form
 // Much better than Formspree's overpriced service
+import SpamScanner from 'spamscanner'
+
+// Initialize SpamScanner with optimized settings for contact forms
+const scanner = new SpamScanner({
+  debug: false, // Set to true for debugging in development
+  // We'll use it to scan just the text content, not full email headers
+})
 
 export default async function handler(req, res) {
   // Only allow POST requests
@@ -57,8 +64,8 @@ export default async function handler(req, res) {
     // You'd ideally use a proper rate limiting solution (Redis, etc.) in production
     console.log('Client IP for potential rate limiting:', clientIP)
 
-    // STAGE 3: ADVANCED SPAM ANALYSIS & ROUTING (Discord)
-    const emailSent = await sendEmail({ // sendEmail now handles advanced spam & Discord routing
+    // STAGE 3: PROFESSIONAL SPAM ANALYSIS & ROUTING (Discord)
+    const emailSent = await sendEmail({ // sendEmail now handles professional spam filtering & Discord routing
       name: name.trim(),
       email: email.trim().toLowerCase(),
       subject: subject.trim(),
@@ -116,19 +123,19 @@ function isInstantSpam({ name, email, subject, message }) {
   return { isSpam: false }
 }
 
-// EMAIL SENDING FUNCTION (now primarily Discord routing & advanced spam)
+// EMAIL SENDING FUNCTION (now with professional SpamScanner integration)
 async function sendEmail({ name, email, subject, message }) {
   
-  // OPTION 1: Discord Webhook with Smart Spam Routing
+  // OPTION 1: Discord Webhook with Professional Spam Analysis
   const mainWebhookUrl = process.env.DISCORD_MAIN_WEBHOOK || null // Set this for main channel
   const spamWebhookUrl = process.env.DISCORD_SPAM_WEBHOOK || 'https://discord.com/api/webhooks/1378615327851675769/VOATvHtlI7Aw-3RV6cl7hY9MUIo2bRWuud8zmD4g_fBxMx6cKnmYwtj-NjgbCfSOzYoz' // Default to spam if no main
   
   if (mainWebhookUrl || spamWebhookUrl) { // Proceed if at least one webhook is configured
-    console.log('🚀 Attempting Discord webhook with multi-stage spam filtering...')
+    console.log('🚀 Attempting Discord webhook with professional SpamScanner filtering...')
     
-    // STAGE 2: Our comprehensive custom spam analysis
-    const spamAnalysis = analyzeSpamLevel({ name, email, subject, message })
-    console.log('🔍 Custom Spam Analysis Result:', spamAnalysis)
+    // STAGE 2: Professional SpamScanner Analysis
+    const spamAnalysis = await analyzeProfessionalSpam({ name, email, subject, message })
+    console.log('🔍 Professional Spam Analysis Result:', spamAnalysis)
     
     // Determine target webhook and channel type
     let targetWebhookUrl = spamWebhookUrl // Default to spam channel
@@ -141,7 +148,7 @@ async function sendEmail({ name, email, subject, message }) {
     }
 
     if (targetWebhookUrl) {
-        console.log(`📤 Routing to ${channelType} channel (Score: ${spamAnalysis.score}/12)`)
+        console.log(`📤 Routing to ${channelType} channel (Professional Analysis: ${spamAnalysis.riskLevel})`)
         
         const discordSent = await sendViaDiscord({ 
           name, email, subject, message, 
@@ -194,180 +201,164 @@ async function sendEmail({ name, email, subject, message }) {
   return false // Indicates all notification attempts failed
 }
 
-// AGGRESSIVE SPAM ANALYSIS SYSTEM - Pure custom heuristics, no external APIs
-function analyzeSpamLevel({ name, email, subject, message }) {
-  let spamScore = 0
-  const flags = []
+// PROFESSIONAL SPAM ANALYSIS with SpamScanner + Custom Contact Form Heuristics
+async function analyzeProfessionalSpam({ name, email, subject, message }) {
+  try {
+    // Create a mock email message for SpamScanner
+    // SpamScanner expects email format, so we'll construct one
+    const mockEmail = `From: ${name} <${email}>
+To: jose@joserodriguez.com
+Subject: ${subject}
+Date: ${new Date().toUTCString()}
+Content-Type: text/plain; charset=utf-8
 
-  // Combine all text for analysis
-  const allText = `${name} ${subject} ${message}`.toLowerCase()
-  const emailDomain = email.split('@')[1]?.toLowerCase() || ''
-  const emailLocal = email.split('@')[0]?.toLowerCase() || ''
+${message}
+`
 
-  // 1. INSTANT SPAM DOMAINS (5 points - almost always spam)
-  const bannedDomains = [
-    'tk', 'ml', 'ga', 'cf', 'suslink.tk', 'guerrillamail.com', 'mailinator.com',
-    'tempmail.org', 'yopmail.com', 'throwaway.email', 'temp-mail.org',
-    'dispostable.com', 'getairmail.com', 'sharklasers.com', 'trashmail.com',
-    'xyz', 'club', 'site', 'online', 'top', 'buzz', 'loan', 'bid', 'icu'
-  ]
-  if (bannedDomains.some(domain => emailDomain.includes(domain))) {
-    spamScore += 5
-    flags.push(`High-risk domain: ${emailDomain}`)
-  }
-
-  // 2. OBVIOUS SPAM CONTENT (4 points each - hard spam)
-  const hardSpamKeywords = [
-    'buy now', 'click here', 'free money', 'make money fast', 'viagra',
-    'casino online', 'lottery winner', 'crypto investment', 'get rich quick',
-    'limited time offer', 'act now', 'guaranteed income', '$$$', 'bitcoin',
-    'forex', 'investment opportunity', 'work from home', 'earn cash',
-    'no experience required', 'double your money', 'winner', 'congratulations',
-    'claim your prize', 'selected', 'million dollars', 'inheritance',
-    'nigerian prince', 'western union', 'money transfer', 'business proposal'
-  ]
-  hardSpamKeywords.forEach(keyword => {
-    if (allText.includes(keyword)) {
-      spamScore += 4
-      flags.push(`Hard spam keyword: "${keyword}"`)
+    console.log('📧 Analyzing with professional SpamScanner...')
+    
+    // Run professional spam analysis
+    const scanResult = await scanner.scan(mockEmail)
+    
+    // SpamScanner provides comprehensive analysis
+    const professionalScore = scanResult.is_spam ? 8 : 0 // Convert boolean to our scale
+    const spamReasons = scanResult.message ? [scanResult.message] : []
+    
+    // Add contact form specific analysis (lightweight custom heuristics)
+    let customScore = 0
+    const customFlags = []
+    
+    // Quick contact form specific checks
+    const allText = `${name} ${subject} ${message}`.toLowerCase()
+    const emailDomain = email.split('@')[1]?.toLowerCase() || ''
+    
+    // Suspicious domains (moderate scoring since we handled extreme ones in Stage 1)
+    const suspiciousDomains = ['tempmail', 'guerrillamail', 'mailinator', 'yopmail', 'throwaway']
+    if (suspiciousDomains.some(domain => emailDomain.includes(domain))) {
+      customScore += 3
+      customFlags.push(`Temporary email domain: ${emailDomain}`)
     }
-  })
-
-  // 3. GIBBERISH/REPEATED CHARACTERS (3 points)
-  if (/(.)\1{6,}/gi.test(allText)) {
-    spamScore += 3
-    flags.push('Excessive repeated characters (gibberish)')
-  }
-
-  // 4. SUSPICIOUS PATTERNS (2 points each)
-  
-  // Random email addresses
-  if (/\d{6,}/.test(emailLocal) || emailLocal.length > 20) {
-    spamScore += 2
-    flags.push('Suspicious email pattern (random numbers/too long)')
-  }
-
-  // Generic/meaningless names
-  const genericNames = ['test', 'user', 'admin', 'contact', 'info', 'hello', 'john doe', 'jane doe']
-  if (genericNames.some(generic => name.toLowerCase().includes(generic))) {
-    spamScore += 2
-    flags.push('Generic/fake name detected')
-  }
-
-  // Suspicious URLs
-  const suspiciousUrls = [
-    /https?:\/\/[^\s]+\.(tk|ml|ga|cf|bit\.ly|tinyurl|t\.co|ow\.ly)/gi,
-    /discord\.gg\/[^\s]+/gi,
-    /t\.me\/[^\s]+/gi,
-    /telegram\.me\/[^\s]+/gi,
-    /whatsapp\.com\/[^\s]+/gi
-  ]
-  suspiciousUrls.forEach(pattern => {
-    if (pattern.test(allText)) {
-      spamScore += 2
-      flags.push('Suspicious URL/link detected')
+    
+    // Very short or generic messages
+    if (message.length < 30) {
+      customScore += 2
+      customFlags.push('Suspiciously short message')
     }
-  })
+    
+    // Generic names
+    const genericNames = ['test', 'user', 'admin', 'contact', 'info']
+    if (genericNames.some(generic => name.toLowerCase().includes(generic))) {
+      customScore += 2
+      customFlags.push('Generic name detected')
+    }
+    
+    // Excessive special characters or gibberish
+    if (/(.)\1{5,}/gi.test(allText)) {
+      customScore += 3
+      customFlags.push('Repeated character pattern (gibberish)')
+    }
+    
+    // Positive indicators (reduce custom score)
+    const trustedDomains = ['gmail.com', 'outlook.com', 'yahoo.com', 'hotmail.com']
+    const eduGovDomains = ['.edu', '.gov', '.ac.uk']
+    
+    if (trustedDomains.includes(emailDomain)) {
+      customScore = Math.max(0, customScore - 1)
+      customFlags.push('Trusted email provider')
+    }
+    
+    if (eduGovDomains.some(domain => emailDomain.includes(domain))) {
+      customScore = Math.max(0, customScore - 2)
+      customFlags.push('Educational/government domain')
+    }
+    
+    // Engineering/academic keywords
+    const legitimateKeywords = [
+      'engineering', 'college', 'university', 'student', 'application',
+      'mechanical', 'portfolio', 'project', 'internship', 'academic'
+    ]
+    if (legitimateKeywords.some(keyword => allText.includes(keyword))) {
+      customScore = Math.max(0, customScore - 1)
+      customFlags.push('Contains academic/engineering keywords')
+    }
+    
+    // Combine scores (professional takes priority)
+    const combinedScore = Math.max(professionalScore, customScore)
+    const allFlags = [...spamReasons, ...customFlags]
+    
+    // Determine final classification
+    const isSpam = scanResult.is_spam || customScore >= 4
+    const riskLevel = combinedScore >= 8 ? 'CRITICAL' :
+                     combinedScore >= 6 ? 'HIGH' :
+                     combinedScore >= 4 ? 'MEDIUM' :
+                     combinedScore >= 2 ? 'LOW' : 'CLEAN'
 
-  // 5. QUALITY ISSUES (1-2 points each)
-  
-  // Very short messages
-  if (message.length < 30) {
-    spamScore += 2
-    flags.push('Message too short (likely spam)')
-  }
-
-  // Meaningless content
-  if (message.length < 50 && !/[.!?]/.test(message)) {
-    spamScore += 2
-    flags.push('No punctuation in short message')
-  }
-
-  // ALL CAPS
-  if (message.length > 20 && message === message.toUpperCase()) {
-    spamScore += 2
-    flags.push('All caps message (shouting)')
-  }
-
-  // Excessive punctuation
-  if (/[!?]{2,}/gi.test(allText)) {
-    spamScore += 1
-    flags.push('Excessive punctuation')
-  }
-
-  // Too many special characters
-  if (/[^\w\s@.-]{3,}/gi.test(allText)) {
-    spamScore += 1
-    flags.push('Too many special characters')
-  }
-
-  // Generic subjects
-  const genericSubjects = ['hello', 'hi', 'contact', 'question', 'inquiry', 'hey', 'test']
-  if (genericSubjects.includes(subject.toLowerCase().trim())) {
-    spamScore += 1
-    flags.push('Generic subject line')
-  }
-
-  // Email-name mismatch
-  const nameWords = name.toLowerCase().split(' ').filter(word => word.length > 2)
-  const hasNameInEmail = nameWords.some(word => 
-    emailLocal.includes(word.substring(0, Math.min(4, word.length)))
-  )
-  if (!hasNameInEmail && nameWords.length > 0) {
-    spamScore += 1
-    flags.push('Email doesn\'t match provided name')
-  }
-
-  // 6. POSITIVE INDICATORS (reduce spam score)
-  
-  // Trusted domains
-  const trustedDomains = ['gmail.com', 'outlook.com', 'yahoo.com', 'hotmail.com']
-  const eduGovDomains = ['.edu', '.gov', '.ac.uk', 'university', 'college']
-  
-  if (trustedDomains.includes(emailDomain)) {
-    spamScore = Math.max(0, spamScore - 1)
-    flags.push('Trusted email provider')
-  }
-  
-  if (eduGovDomains.some(domain => emailDomain.includes(domain))) {
-    spamScore = Math.max(0, spamScore - 2)
-    flags.push('Educational/government domain')
-  }
-
-  // Engineering/academic keywords
-  const legitimateKeywords = [
-    'engineering', 'college', 'university', 'student', 'application',
-    'admissions', 'program', 'mechanical', 'portfolio', 'project',
-    'internship', 'scholarship', 'research', 'academic', 'degree'
-  ]
-  if (legitimateKeywords.some(keyword => allText.includes(keyword))) {
-    spamScore = Math.max(0, spamScore - 1)
-    flags.push('Contains academic/engineering keywords')
-  }
-
-  // Well-structured content
-  const sentences = message.split(/[.!?]+/).filter(s => s.trim().length > 15)
-  if (sentences.length >= 2 && message.length > 100) {
-    spamScore = Math.max(0, spamScore - 1)
-    flags.push('Well-structured message')
-  }
-
-  // 7. DETERMINE SPAM STATUS
-  const isSpam = spamScore >= 3  // Threshold for routing to spam channel
-  const riskLevel = spamScore >= 8 ? 'CRITICAL' :
-                   spamScore >= 6 ? 'HIGH' :
-                   spamScore >= 4 ? 'MEDIUM' :
-                   spamScore >= 2 ? 'LOW' : 'CLEAN'
-
-  return {
-    score: Math.min(spamScore, 12), // Cap at 12 for our custom system
-    isSpam,
-    riskLevel,
-    flags,
-    recommendation: isSpam ? 'Route to spam channel' : 'Route to main channel',
-    confidence: spamScore >= 6 ? 'High confidence spam' :
-               spamScore >= 4 ? 'Likely spam' :
-               spamScore >= 2 ? 'Suspicious' : 'Legitimate'
+    return {
+      score: combinedScore,
+      isSpam,
+      riskLevel,
+      flags: allFlags,
+      professionalAnalysis: {
+        isSpam: scanResult.is_spam,
+        message: scanResult.message,
+        // Include other SpamScanner details if available
+        results: scanResult.results || null
+      },
+      customAnalysis: {
+        score: customScore,
+        flags: customFlags
+      },
+      recommendation: isSpam ? 'Route to spam channel' : 'Route to main channel',
+      confidence: scanResult.is_spam ? 'Professional spam detection' :
+                 combinedScore >= 4 ? 'Suspicious patterns detected' :
+                 'Appears legitimate'
+    }
+    
+  } catch (error) {
+    console.error('❌ Professional spam analysis failed:', error)
+    
+    // Fallback to basic custom analysis if SpamScanner fails
+    console.log('↪️ Falling back to basic custom analysis...')
+    
+    let fallbackScore = 0
+    const fallbackFlags = []
+    
+    const allText = `${name} ${subject} ${message}`.toLowerCase()
+    const emailDomain = email.split('@')[1]?.toLowerCase() || ''
+    
+    // Basic fallback checks
+    const suspiciousDomains = ['tempmail', 'guerrillamail', 'mailinator']
+    if (suspiciousDomains.some(domain => emailDomain.includes(domain))) {
+      fallbackScore += 4
+      fallbackFlags.push(`Suspicious domain: ${emailDomain}`)
+    }
+    
+    if (message.length < 20) {
+      fallbackScore += 3
+      fallbackFlags.push('Very short message')
+    }
+    
+    const spamKeywords = ['buy now', 'click here', 'free money', 'make money']
+    spamKeywords.forEach(keyword => {
+      if (allText.includes(keyword)) {
+        fallbackScore += 4
+        fallbackFlags.push(`Spam keyword: "${keyword}"`)
+      }
+    })
+    
+    const isSpam = fallbackScore >= 4
+    
+    return {
+      score: fallbackScore,
+      isSpam,
+      riskLevel: fallbackScore >= 6 ? 'HIGH' : fallbackScore >= 4 ? 'MEDIUM' : 'LOW',
+      flags: fallbackFlags,
+      professionalAnalysis: null,
+      customAnalysis: { score: fallbackScore, flags: fallbackFlags },
+      recommendation: isSpam ? 'Route to spam channel' : 'Route to main channel',
+      confidence: 'Fallback analysis (professional scanner unavailable)',
+      error: error.message
+    }
   }
 }
 
