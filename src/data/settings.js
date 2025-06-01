@@ -1,34 +1,37 @@
 /*
 ===========================================
-    JOSE'S WEBSITE SETTINGS & LINKS
+    WEBSITE SETTINGS & CONFIGURATION
 ===========================================
 
-Hi Jose! This file contains all your contact information and website settings.
-This makes it super easy to update your LinkedIn, email, or any other links
-without digging through code.
+This file contains all the website settings that Jose can 
+easily customize without touching the code. Perfect for 
+updating contact information, social links, and site settings!
 
-HOW TO UPDATE YOUR LINKS:
-1. Find the link you want to change below
-2. Replace the URL with your new link
-3. Keep the quotation marks around the links
-4. Save the file and refresh your website
-
-IMPORTANT:
-- Make sure your links start with "https://" 
-- Test your links before adding them
-- Keep backup copies of your old links
+EASY TO UPDATE:
+- Contact information
+- Social media links  
+- Website metadata
+- reCAPTCHA settings
 */
 
+// Contact Information (Easy to update!)
 export const contactInfo = {
-  // Your main contact information
-  email: "jose.rodriguez.engineering@email.com", // Replace with your real email
+  email: "jose.rodriguez.engineer@gmail.com", // Your real email here
+  phone: "+1 (555) 123-4567", // Your phone if you want to share it
+  location: "United States", // Your general location
   
-  // Social media and professional links
-  socialMedia: {
-    linkedin: "https://linkedin.com/in/jose-rodriguez-engineering", // Your actual LinkedIn profile
-    github: "https://github.com/jose-rodriguez", // If you have GitHub projects
-    instagram: "", // Optional: your Instagram if professional
-    twitter: ""    // Optional: your Twitter if professional
+  // Social Media Links (Update these with your real profiles!)
+  social: {
+    linkedin: "https://linkedin.com/in/jose-rodriguez-engineer",
+    github: "https://github.com/jose-rodriguez", // Add if you have one
+    instagram: "", // Add if you want to share
+    twitter: "", // Add if you have one
+  },
+  
+  // Response time information
+  responseTime: {
+    typical: "24-48 hours",
+    urgent: "Please mention urgency in subject line"
   },
   
   // Contact form settings
@@ -59,34 +62,38 @@ This appears in search results and when people share your site.
 export const siteInfo = {
   // Basic website information
   title: "Jose Rodriguez - Mechanical Engineering Portfolio",
-  description: "Dedicated high school junior showcasing innovative mechanical engineering projects and preparing for college applications.",
+  description: "Innovative mechanical engineering projects by high school student Jose Rodriguez",
   author: "Jose Rodriguez",
   
   // This appears in browser tabs and bookmarks
   shortTitle: "Jose Rodriguez Portfolio",
   
   // Keywords that help people find your website in search engines
-  keywords: [
-    "mechanical engineering",
-    "high school engineering", 
-    "engineering portfolio",
-    "STEM student",
-    "college applications",
-    "engineering projects",
-    "innovation",
-    "design thinking"
-  ],
+  keywords: "mechanical engineering, portfolio, high school, projects, college application",
   
   // Your website URL (update this when you know your final domain)
-  siteUrl: "https://your-portfolio-site.vercel.app",
+  url: "https://jose-rodriguez-portfolio.vercel.app", // Update with your real URL
   
   // Social media preview settings
   // This is what appears when someone shares your website on social media
-  socialPreview: {
-    title: "Jose Rodriguez - Engineering Portfolio",
-    description: "High school mechanical engineering student with a passion for innovative design and problem-solving.",
-    // You can add a preview image path here later
-    image: "/images/portfolio-preview.jpg" // Add this image to your public/images folder
+  ogImage: "/images/portfolio-preview.jpg", // Create this image if you want custom previews
+  
+  // Analytics & Tracking (Optional)
+  googleAnalytics: "", // Add Google Analytics ID if you want more detailed tracking
+  
+  // reCAPTCHA Configuration
+  recaptcha: {
+    siteKey: "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI", // Replace with your real site key
+    enabled: true,
+    action: "contact_form_submit"
+  },
+  
+  // Contact Form Settings
+  contactForm: {
+    maxSubmissionsPerDay: 3,
+    enableSpamProtection: true,
+    requireRecaptcha: true,
+    formspreeEndpoint: "https://formspree.io/f/mblyrbkg" // Your Formspree endpoint
   }
 }
 
