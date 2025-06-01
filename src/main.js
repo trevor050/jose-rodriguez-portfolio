@@ -52,9 +52,11 @@ let currentFilters = ['All'] // Changed to array for multi-select
 let submissionAttempts = 0
 let lastSubmissionTime = 0
 let shadowBanned = false
+let shadowBanTime = 0
 const SUBMISSION_COOLDOWN = 30000 // 30 seconds between submissions
 const MAX_ATTEMPTS = 15 // Increased threshold before shadowban
 const MAX_SUCCESSFUL_SUBMISSIONS = 3 // Cookie-based limit
+const SHADOWBAN_DURATION = 2 * 60 * 60 * 1000 // 2 hours in milliseconds
 
 // Much more targeted profanity list (only truly inappropriate words)
 const PROFANITY_LIST = [
@@ -66,14 +68,23 @@ const PROFANITY_LIST = [
 const SPAM_KEYWORDS = [
   'buy now', 'click here', 'free money', 'make money fast', 'viagra', 
   'casino online', 'lottery winner', 'congratulations winner', 
-  'crypto investment', 'get rich quick', 'earn $$$'
+  'crypto investment', 'get rich quick', 'earn $$$', 'limited time offer'
 ]
 
-// Valid TLD list (major ones)
-const VALID_TLDS = [
-  'com', 'org', 'net', 'edu', 'gov', 'mil', 'int', 'co', 'io', 'ai',
-  'tech', 'dev', 'app', 'blog', 'site', 'online', 'store', 'shop',
-  'us', 'uk', 'ca', 'au', 'de', 'fr', 'jp', 'cn', 'in', 'br', 'mx'
+// Comprehensive disposable email domains (much better than TLD checking)
+const DISPOSABLE_DOMAINS = [
+  '10minutemail.com', 'guerrillamail.com', 'mailinator.com', 'tempmail.org',
+  'yopmail.com', 'throwaway.email', 'temp-mail.org', 'mailnesia.com',
+  'getairmail.com', 'mailcatch.com', 'sharklasers.com', 'trashmail.com'
+]
+
+// Suspicious URL patterns (expanded)
+const SUSPICIOUS_URL_PATTERNS = [
+  /https?:\/\/[^\s]+\.(tk|ml|ga|cf|bit\.ly|tinyurl|t\.co|ow\.ly)/gi,
+  /mailto:[^\s]+/gi,
+  /discord\.gg\/[^\s]+/gi,
+  /t\.me\/[^\s]+/gi,
+  /tg:\/\/[^\s]+/gi
 ]
 
 // Cookie-based submission tracking
@@ -108,6 +119,35 @@ const incrementSubmissionCount = () => {
     return newCount
   } catch (error) {
     return 0
+  }
+}
+
+// Check if shadowban has expired
+const checkShadowBanExpiry = () => {
+  if (shadowBanned && shadowBanTime > 0) {
+    const now = Date.now()
+    if (now - shadowBanTime > SHADOWBAN_DURATION) {
+      shadowBanned = false
+      shadowBanTime = 0
+      submissionAttempts = 0
+    }
+  }
+}
+
+// Sneaky console logging function for testing (minimally different from real success)
+const logFormInteraction = (type, data) => {
+  const timestamp = new Date().toISOString()
+  const userAgent = navigator.userAgent.substring(0, 20)
+  
+  if (type === 'success') {
+    console.log(`[${timestamp}] Form submission completed successfully`)
+    console.log(`User-Agent: ${userAgent}...`)
+    console.log(`Form data validated and processed`)
+  } else if (type === 'shadow') {
+    console.log(`[${timestamp}] Form submission completed successfully`) // Same message!
+    console.log(`User-Agent: ${userAgent}...`)
+    console.log(`Form data validated and processed`) // Identical logging
+    // The difference is subtle - no actual API call happens
   }
 }
 
@@ -459,6 +499,9 @@ const closeProjectModal = () => {
 const validateContactForm = (data) => {
   const errors = []
   
+  // Check if shadowban has expired
+  checkShadowBanExpiry()
+  
   // Check if shadowbanned
   if (shadowBanned) {
     return ['Your submission could not be processed. Please try again later.']
@@ -476,18 +519,19 @@ const validateContactForm = (data) => {
     return ['Please wait 30 seconds between submissions.']
   }
   
-  // Name validation with improved regex
+  // Unicode-friendly name validation (supports accents, diacritics, non-Latin alphabets)
   if (!data.name || data.name.trim().length < 2) {
     errors.push('Name must be at least 2 characters long')
   }
   if (data.name && data.name.length > 100) {
     errors.push('Name must be less than 100 characters')
   }
-  if (data.name && !/^[a-zA-Z\s\-\.\']+$/.test(data.name)) {
+  // New Unicode-friendly regex that allows letters, marks, spaces, periods, hyphens, apostrophes
+  if (data.name && !/^[\p{L}\p{M} .'-]{2,100}$/u.test(data.name)) {
     errors.push('Name contains invalid characters')
   }
   
-  // Enhanced email validation with TLD checking
+  // Enhanced email validation with disposable domain checking
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
   if (!data.email || !emailRegex.test(data.email)) {
     errors.push('Please enter a valid email address')
@@ -496,16 +540,13 @@ const validateContactForm = (data) => {
     errors.push('Email address is too long')
   }
   
-  // Check for valid TLD (but more lenient)
+  // Check for disposable email domains (much better than TLD checking)
   if (data.email && emailRegex.test(data.email)) {
     const emailParts = data.email.toLowerCase().split('@')
     if (emailParts.length === 2) {
       const domain = emailParts[1]
-      const tld = domain.split('.').pop()
-      // Only block obviously fake TLDs
-      const fakeTlds = ['tk', 'ml', 'ga', 'cf', 'xxx', 'test']
-      if (fakeTlds.includes(tld)) {
-        errors.push('Please use a valid email domain')
+      if (DISPOSABLE_DOMAINS.includes(domain)) {
+        errors.push('Please use a permanent email address')
       }
     }
   }
@@ -526,34 +567,49 @@ const validateContactForm = (data) => {
     errors.push('Message must be less than 2000 characters')
   }
   
-  // Smart profanity filter (whole word matching only)
-  const allText = (data.name + ' ' + data.subject + ' ' + data.message).toLowerCase()
-  const words = allText.split(/\s+/)
-  const foundProfanity = PROFANITY_LIST.some(badWord => 
-    words.some(word => word === badWord || word === badWord + 's' || word === badWord + 'ing')
-  )
+  // Normalize text for analysis (removes funky Unicode tricks)
+  const allText = (data.name + ' ' + data.subject + ' ' + data.message)
+    .normalize('NFKD') // Normalize Unicode
+    .toLowerCase()
+  
+  // Smart profanity filter with word boundaries and punctuation handling
+  const cleanText = allText.replace(/[^\p{L}\p{N}\s]/gu, ' ') // Remove punctuation for analysis
+  const foundProfanity = PROFANITY_LIST.some(badWord => {
+    const wordBoundaryRegex = new RegExp(`\\b${badWord}(?:s|ing)?\\b`, 'i')
+    return wordBoundaryRegex.test(cleanText)
+  })
   if (foundProfanity) {
     errors.push('Message contains inappropriate language')
   }
   
-  // Relaxed spam keyword detection (only exact phrase matches)
-  const foundSpam = SPAM_KEYWORDS.some(keyword => allText.includes(keyword.toLowerCase()))
+  // Smart spam keyword detection with word boundaries
+  const foundSpam = SPAM_KEYWORDS.some(keyword => {
+    const keywordRegex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i')
+    return keywordRegex.test(allText)
+  })
   if (foundSpam) {
     errors.push('Message appears to contain promotional content')
   }
   
-  // Only block obvious spam URLs (not mentions of websites)
-  if (/https?:\/\/[^\s]+\.(tk|ml|ga|cf|bit\.ly|tinyurl)/gi.test(allText)) {
+  // Improved suspicious URL detection
+  const foundSuspiciousUrl = SUSPICIOUS_URL_PATTERNS.some(pattern => {
+    pattern.lastIndex = 0 // Reset regex state
+    return pattern.test(allText)
+  })
+  if (foundSuspiciousUrl) {
     errors.push('Message contains suspicious links')
   }
   
-  // Relaxed repeated character detection (7+ repetitions instead of 5+)
-  if (/(.)\1{6,}/gi.test(allText)) {
+  // Relaxed repeated character detection (alphabetic only, 7+ repetitions)
+  if (/([a-zA-Z])\1{6,}/gi.test(allText)) {
     errors.push('Message contains excessive repeated characters')
   }
   
-  // Removed overly aggressive caps, number, and special character detection
-  // Removed gibberish detection as it was too aggressive
+  // Emoji spam detection (more than 10 emojis is probably spam)
+  const emojiCount = (allText.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu) || []).length
+  if (emojiCount > 10) {
+    errors.push('Message contains too many emojis')
+  }
   
   return errors
 }
@@ -612,10 +668,14 @@ const submitContactForm = async (data) => {
 const handleContactForm = async (e) => {
   e.preventDefault()
   
+  // Check shadowban expiry before processing
+  checkShadowBanExpiry()
+  
   // Immediate shadowban check
   if (shadowBanned) {
     const btn = e.target.querySelector('.btn')
     btn.innerHTML = '<span>Message Sent Successfully!</span>'
+    logFormInteraction('shadow') // Use sneaky logging
     btn.style.background = 'var(--accent)'
     
     // Reset appearance after delay (fake success)
@@ -639,6 +699,7 @@ const handleContactForm = async (e) => {
     // Check for shadowban threshold
     if (submissionAttempts >= MAX_ATTEMPTS) {
       shadowBanned = true
+      shadowBanTime = Date.now() // Record when shadowban started
       // Don't show any indication of shadowban to user
       showFormErrors(['Please check your information and try again.'])
     } else {
@@ -664,9 +725,11 @@ const handleContactForm = async (e) => {
       lastSubmissionTime = Date.now()
       submissionAttempts = 0 // Reset on successful submission
       incrementSubmissionCount() // Track successful submission in cookie
+      logFormInteraction('success', data) // Use real success logging
       
       // Show success state
       btn.innerHTML = '<span>Message Sent Successfully!</span>'
+      console.log("Users Message Was Sent Succussfully") //this is fake – the real one won't do this
       btn.style.background = 'var(--accent)'
       
       // Reset form after delay
@@ -688,6 +751,7 @@ const handleContactForm = async (e) => {
     // Check for shadowban threshold
     if (submissionAttempts >= MAX_ATTEMPTS) {
       shadowBanned = true
+      shadowBanTime = Date.now() // Record when shadowban started
     }
     
     // Show error state
@@ -787,7 +851,7 @@ const renderApp = () => {
           <p class="footer-main">${footerText}</p>
           ${keyboardShortcuts}
         </div>
-  </div>
+      </div>
     </footer>
   `
   
