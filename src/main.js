@@ -48,6 +48,32 @@ let currentView = 'projects'
 let isDarkMode = true
 let currentFilters = ['All'] // Changed to array for multi-select
 
+// Anti-spam state management
+let submissionAttempts = 0
+let lastSubmissionTime = 0
+let shadowBanned = false
+const SUBMISSION_COOLDOWN = 30000 // 30 seconds between submissions
+const MAX_ATTEMPTS = 10 // Shadowban after 10 failed attempts
+
+// Profanity and spam word lists (basic list - can be expanded)
+const PROFANITY_LIST = [
+  'damn', 'hell', 'shit', 'fuck', 'bitch', 'ass', 'bastard', 'crap',
+  'piss', 'slut', 'whore', 'cock', 'dick', 'pussy', 'tits', 'boobs'
+]
+
+const SPAM_KEYWORDS = [
+  'buy now', 'click here', 'free money', 'make money', 'viagra', 'casino',
+  'lottery', 'winner', 'congratulations', 'urgent', 'limited time', 'act now',
+  'crypto', 'bitcoin', 'investment', 'roi', 'guarantee', 'risk free'
+]
+
+// Valid TLD list (major ones)
+const VALID_TLDS = [
+  'com', 'org', 'net', 'edu', 'gov', 'mil', 'int', 'co', 'io', 'ai',
+  'tech', 'dev', 'app', 'blog', 'site', 'online', 'store', 'shop',
+  'us', 'uk', 'ca', 'au', 'de', 'fr', 'jp', 'cn', 'in', 'br', 'mx'
+]
+
 /*
 ===========================================
     AUTOMATIC FILTER GENERATION
@@ -392,25 +418,51 @@ const closeProjectModal = () => {
   }
 }
 
-// Contact form validation
+// Enhanced contact form validation with anti-spam measures
 const validateContactForm = (data) => {
   const errors = []
   
-  // Name validation
+  // Check if shadowbanned
+  if (shadowBanned) {
+    return ['Your submission could not be processed. Please try again later.']
+  }
+  
+  // Rate limiting check
+  const now = Date.now()
+  if (now - lastSubmissionTime < SUBMISSION_COOLDOWN) {
+    return ['Please wait 30 seconds between submissions.']
+  }
+  
+  // Name validation with improved regex
   if (!data.name || data.name.trim().length < 2) {
     errors.push('Name must be at least 2 characters long')
   }
   if (data.name && data.name.length > 100) {
     errors.push('Name must be less than 100 characters')
   }
+  if (data.name && !/^[a-zA-Z\s\-\.\']+$/.test(data.name)) {
+    errors.push('Name contains invalid characters')
+  }
   
-  // Email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  // Enhanced email validation with TLD checking
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
   if (!data.email || !emailRegex.test(data.email)) {
     errors.push('Please enter a valid email address')
   }
   if (data.email && data.email.length > 254) {
     errors.push('Email address is too long')
+  }
+  
+  // Check for valid TLD
+  if (data.email) {
+    const emailParts = data.email.toLowerCase().split('@')
+    if (emailParts.length === 2) {
+      const domain = emailParts[1]
+      const tld = domain.split('.').pop()
+      if (!VALID_TLDS.includes(tld)) {
+        errors.push('Please use a valid email domain')
+      }
+    }
   }
   
   // Subject validation
@@ -429,19 +481,53 @@ const validateContactForm = (data) => {
     errors.push('Message must be less than 2000 characters')
   }
   
-  // Check for potential spam patterns
-  const spamPatterns = [
-    /(?:https?:\/\/|www\.)[^\s]+/gi, // URLs
-    /\b(?:buy|sell|money|free|click|offer|deal|limited|urgent)\b/gi, // Spam keywords
-    /(.)\1{4,}/gi, // Repeated characters (aaaaa)
-  ]
-  
+  // Profanity filter
   const allText = (data.name + ' ' + data.subject + ' ' + data.message).toLowerCase()
-  spamPatterns.forEach(pattern => {
-    if (pattern.test(allText)) {
-      errors.push('Message appears to contain inappropriate content')
-    }
-  })
+  const foundProfanity = PROFANITY_LIST.some(word => allText.includes(word))
+  if (foundProfanity) {
+    errors.push('Message contains inappropriate language')
+  }
+  
+  // Spam keyword detection
+  const foundSpam = SPAM_KEYWORDS.some(keyword => allText.includes(keyword.toLowerCase()))
+  if (foundSpam) {
+    errors.push('Message appears to contain promotional content')
+  }
+  
+  // Suspicious pattern detection
+  if (/https?:\/\/[^\s]+/gi.test(allText)) {
+    errors.push('Messages cannot contain URLs for security reasons')
+  }
+  
+  // Repeated character spam detection
+  if (/(.)\1{4,}/gi.test(allText)) {
+    errors.push('Message contains invalid repeated characters')
+  }
+  
+  // All caps detection (more than 50% caps)
+  const capsCount = (allText.match(/[A-Z]/g) || []).length
+  const letterCount = (allText.match(/[A-Za-z]/g) || []).length
+  if (letterCount > 10 && capsCount / letterCount > 0.5) {
+    errors.push('Please avoid excessive use of capital letters')
+  }
+  
+  // Number spam detection (more than 30% numbers)
+  const numberCount = (allText.match(/[0-9]/g) || []).length
+  if (allText.length > 20 && numberCount / allText.length > 0.3) {
+    errors.push('Message contains excessive numbers')
+  }
+  
+  // Special character spam detection
+  const specialCount = (allText.match(/[!@#$%^&*()+={}[\]|\\:";'<>?,./]/g) || []).length
+  if (allText.length > 20 && specialCount / allText.length > 0.2) {
+    errors.push('Message contains excessive special characters')
+  }
+  
+  // Gibberish detection (basic - lack of vowels)
+  const vowelCount = (allText.match(/[aeiou]/gi) || []).length
+  if (letterCount > 20 && vowelCount / letterCount < 0.15) {
+    errors.push('Message appears to contain invalid text')
+  }
   
   return errors
 }
@@ -495,9 +581,25 @@ const submitContactForm = async (data) => {
   }
 }
 
-// Enhanced contact form handler
+// Enhanced contact form handler with anti-spam and shadowbanning
 const handleContactForm = async (e) => {
   e.preventDefault()
+  
+  // Immediate shadowban check
+  if (shadowBanned) {
+    const btn = e.target.querySelector('.btn')
+    btn.innerHTML = '<span>Message Sent Successfully!</span>'
+    btn.style.background = 'var(--accent)'
+    
+    // Reset appearance after delay (fake success)
+    setTimeout(() => {
+      btn.innerHTML = '<span>Send Message</span>'
+      btn.disabled = false
+      btn.style.background = 'var(--primary)'
+      e.target.reset()
+    }, 3000)
+    return // Silently block submission
+  }
   
   const formData = new FormData(e.target)
   const data = Object.fromEntries(formData)
@@ -505,7 +607,16 @@ const handleContactForm = async (e) => {
   // Validate form data
   const validationErrors = validateContactForm(data)
   if (validationErrors.length > 0) {
-    showFormErrors(validationErrors)
+    submissionAttempts++
+    
+    // Check for shadowban threshold
+    if (submissionAttempts >= MAX_ATTEMPTS) {
+      shadowBanned = true
+      // Don't show any indication of shadowban to user
+      showFormErrors(['Please check your information and try again.'])
+    } else {
+      showFormErrors(validationErrors)
+    }
     return
   }
   
@@ -518,10 +629,14 @@ const handleContactForm = async (e) => {
   clearFormErrors()
   
   try {
-    // Submit form data
+    // Only submit if not shadowbanned
     const result = await submitContactForm(data)
     
     if (result.success) {
+      // Update rate limiting
+      lastSubmissionTime = Date.now()
+      submissionAttempts = 0 // Reset on successful submission
+      
       // Show success state
       btn.innerHTML = '<span>Message Sent Successfully!</span>'
       btn.style.background = 'var(--accent)'
@@ -540,6 +655,12 @@ const handleContactForm = async (e) => {
     
   } catch (error) {
     console.error('Contact form error:', error)
+    submissionAttempts++
+    
+    // Check for shadowban threshold
+    if (submissionAttempts >= MAX_ATTEMPTS) {
+      shadowBanned = true
+    }
     
     // Show error state
     btn.innerHTML = '<span>Failed to Send - Try Again</span>'
