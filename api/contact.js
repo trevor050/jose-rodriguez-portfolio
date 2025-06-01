@@ -118,10 +118,18 @@ export default async function handler(req, res) {
 async function sendEmail({ name, email, subject, message }) {
   
   // OPTION 1: Discord Webhook (instant notifications, zero signup drama)
-  if (process.env.DISCORD_WEBHOOK_URL) {
-    console.log('Attempting Discord webhook...')
-    const discordSent = await sendViaDiscord({ name, email, subject, message })
-    if (discordSent) return true
+  const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/1378611016878788668/ECnSl8eLcAMgVIS_HaUlVfOE-bxHpc3OBqRZL1oNNFO4MZxf5S3sXT7i6p5tQQZu8kut'
+  
+  if (discordWebhookUrl) {
+    console.log('🚀 Attempting Discord webhook...')
+    console.log('Webhook URL configured:', discordWebhookUrl ? 'YES' : 'NO')
+    const discordSent = await sendViaDiscord({ name, email, subject, message }, discordWebhookUrl)
+    if (discordSent) {
+      console.log('✅ Discord webhook successful - email sending not needed')
+      return true
+    } else {
+      console.log('❌ Discord webhook failed - trying other options')
+    }
   }
   
   // OPTION 2: SendGrid (if available)
@@ -142,8 +150,8 @@ async function sendEmail({ name, email, subject, message }) {
     return await sendViaGmail({ name, email, subject, message })
   }
   
-  // No email service configured - log everything for manual follow-up
-  console.log('⚠️ No notification service configured. Contact details logged for manual outreach.')
+  // No notification service configured - log everything for manual follow-up
+  console.log('⚠️ No notification service worked. Contact details logged for manual outreach.')
   console.log('📋 Complete contact form submission:')
   console.log(`Name: ${name}`)
   console.log(`Email: ${email}`)
@@ -157,8 +165,10 @@ async function sendEmail({ name, email, subject, message }) {
 }
 
 // Discord Webhook implementation (SECURE - URL hidden on backend)
-async function sendViaDiscord({ name, email, subject, message }) {
+async function sendViaDiscord({ name, email, subject, message }, discordWebhookUrl) {
   try {
+    console.log('📤 Preparing Discord embed message...')
+    
     const embed = {
       title: "🔧 New Portfolio Contact!",
       color: 0x007ACC, // Nice blue color
@@ -190,7 +200,9 @@ async function sendViaDiscord({ name, email, subject, message }) {
       timestamp: new Date().toISOString()
     }
 
-    const response = await fetch(process.env.DISCORD_WEBHOOK_URL, {
+    console.log('🌐 Sending to Discord webhook:', discordWebhookUrl.substring(0, 50) + '...')
+
+    const response = await fetch(discordWebhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -198,21 +210,25 @@ async function sendViaDiscord({ name, email, subject, message }) {
       body: JSON.stringify({
         content: "📬 **New contact form submission!**",
         embeds: [embed],
-        username: "Portfolio Bot",
-        avatar_url: "https://cdn.discordapp.com/emojis/🔧.png" // Optional bot avatar
+        username: "Portfolio Bot"
       })
     })
+
+    console.log('📡 Discord response status:', response.status)
 
     if (response.ok) {
       console.log('✅ Discord notification sent successfully')
       return true
     } else {
-      console.error('Discord webhook failed:', response.status, response.statusText)
+      const errorText = await response.text()
+      console.error('❌ Discord webhook failed:', response.status, response.statusText)
+      console.error('Error details:', errorText)
       return false
     }
 
   } catch (error) {
-    console.error('Discord webhook error:', error)
+    console.error('💥 Discord webhook error:', error.message)
+    console.error('Full error:', error)
     return false
   }
 }
