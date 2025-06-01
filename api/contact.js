@@ -15,14 +15,24 @@ export default async function handler(req, res) {
   try {
     const { name, email, subject, message, website } = req.body
 
-    // 1. HONEYPOT CHECK - Silent bot rejection
+    // STAGE 0: HONEYPOT CHECK - INSTANT BOT REJECTION
     if (website && website.trim() !== '') {
-      console.log('🍯 Honeypot triggered - bot detected')
-      // Return success to not alert bots
-      return res.status(200).json({ success: true, message: 'Message sent successfully!' })
+      console.log('🍯 Honeypot triggered - INSTANT BOT REJECTION')
+      // Return a generic success to not alert bots, but don't process further.
+      return res.status(200).json({ success: true, message: 'Message received.' })
     }
 
-    // 2. BASIC VALIDATION
+    // STAGE 1: INSTANT OBLITERATION FOR 1000% SPAM
+    const instantSpamVerdict = isInstantSpam({ name, email, subject, message })
+    if (instantSpamVerdict.isSpam) {
+      console.log('🗑️ INSTANT SPAM REJECTION:', instantSpamVerdict.reason)
+      return res.status(400).json({
+        error: 'Message identified as high-confidence spam. If this is a legitimate inquiry, please contact Jose directly via LinkedIn.',
+        reason: instantSpamVerdict.reason
+      })
+    }
+
+    // STAGE 2: BASIC VALIDATION
     const errors = []
     
     if (!name || name.trim().length < 2) {
@@ -42,31 +52,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: errors.join(', ') })
     }
 
-    // 3. SIMPLE RATE LIMITING (IP-based)
+    // IP-based rate limiting (basic implementation)
     const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress
-    const rateLimitKey = `ratelimit_${clientIP}`
-    
-    // In production, you'd use Redis or a database
-    // For now, we'll just log and continue (Vercel handles most bot protection)
-    
-    // 4. SPAM DETECTION (conservative)
-    const allText = `${name} ${subject} ${message}`.toLowerCase()
-    const obviousSpam = [
-      'buy now', 'click here', 'free money', 'casino', 'viagra',
-      'crypto investment', 'get rich quick', 'limited time offer'
-    ]
-    
-    const isSpam = obviousSpam.some(spam => allText.includes(spam)) ||
-                   /(.)\1{10,}/gi.test(allText) || // Excessive repeated chars
-                   allText.length < 20 // Extremely short
+    // You'd ideally use a proper rate limiting solution (Redis, etc.) in production
+    console.log('Client IP for potential rate limiting:', clientIP)
 
-    if (isSpam) {
-      console.log('🚫 Spam detected:', { name: name.substring(0, 10), email: email.split('@')[1] })
-      return res.status(400).json({ error: 'Message appears to contain spam content' })
-    }
-
-    // 5. SEND EMAIL (multiple options) - Handle email service chaos
-    const emailSent = await sendEmail({
+    // STAGE 3: ADVANCED SPAM ANALYSIS & ROUTING (Discord)
+    const emailSent = await sendEmail({ // sendEmail now handles advanced spam & Discord routing
       name: name.trim(),
       email: email.trim().toLowerCase(),
       subject: subject.trim(),
@@ -74,152 +66,182 @@ export default async function handler(req, res) {
     })
 
     if (emailSent) {
-      // Log successful submission for analytics
-      console.log('✅ Contact form submission:', {
-        name: name.substring(0, 10) + '...',
-        emailDomain: email.split('@')[1],
-        timestamp: new Date().toISOString(),
-        ip: clientIP
-      })
-
+      console.log('✅ Discord notification process completed.')
       return res.status(200).json({
         success: true,
         message: 'Message sent successfully! I\'ll get back to you soon.'
       })
     } else {
-      // If no email service configured, log for manual follow-up
-      console.log('📧 EMAIL SERVICE NOT CONFIGURED - MANUAL FOLLOW-UP NEEDED:', {
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        subject: subject.trim(),
-        message: message.trim(),
-        timestamp: new Date().toISOString(),
-        ip: clientIP,
-        note: 'Email services are down/suspended. Manual outreach required.'
-      })
-      
-      // Still return success to avoid user frustration
-      return res.status(200).json({
-        success: true,
-        message: 'Message received! I\'ll get back to you soon via your provided email.'
+      // This path is taken if Discord fails AND all email fallbacks fail
+      console.log('❌ All notification methods failed (Discord and email fallbacks).')
+      return res.status(500).json({
+        error: 'Failed to send message due to an internal issue. Please try LinkedIn.'
       })
     }
 
   } catch (error) {
-    console.error('Contact form error:', error)
-    
+    console.error('💥 Contact form main handler error:', error)
     return res.status(500).json({
-      error: 'Failed to send message. Please try again or contact via LinkedIn.'
+      error: 'Failed to process message. Please try again or contact via LinkedIn.'
     })
   }
 }
 
-// EMAIL SENDING FUNCTION - Handle email service suspensions gracefully
+// HELPER: INSTANT SPAM DETECTION (1000% SPAM)
+function isInstantSpam({ name, email, subject, message }) {
+  const allText = `${name} ${subject} ${message}`.toLowerCase()
+  
+  const instantSpamKeywords = [
+    'enlarge your p3nis', 'xxx video', 'hot singles', 'male enhancement',
+    'russian brides', 'nigerian prince', 'cheap viagra', 'buy followers',
+    'adult content', 'earn $1000 a day', 'work from home scheme'
+    // Add more absolutely undeniable spam phrases here
+  ]
+
+  for (const keyword of instantSpamKeywords) {
+    if (allText.includes(keyword)) {
+      return { isSpam: true, reason: `Contains instant spam keyword: "${keyword}"` }
+    }
+  }
+  
+  // Extremely aggressive TLDs (almost exclusively spam)
+  const bannedTlds = ['.xyz', '.club', '.site', '.online', '.top', '.buzz', '.loan', '.bid', '.icu']
+  const emailDomain = email.split('@')[1]?.toLowerCase() || ''
+  if (bannedTlds.some(tld => emailDomain.endsWith(tld))) {
+    return { isSpam: true, reason: `Email from banned TLD: ${emailDomain}` }
+  }
+
+  // Add more instant rejection rules if needed (e.g., specific Unicode ranges, known bad IPs via a list)
+
+  return { isSpam: false }
+}
+
+// EMAIL SENDING FUNCTION (now primarily Discord routing & advanced spam)
 async function sendEmail({ name, email, subject, message }) {
   
   // OPTION 1: Discord Webhook with Smart Spam Routing
   const mainWebhookUrl = process.env.DISCORD_MAIN_WEBHOOK || null // Set this for main channel
-  const spamWebhookUrl = process.env.DISCORD_SPAM_WEBHOOK || 'https://discord.com/api/webhooks/1378615327851675769/VOATvHtlI7Aw-3RV6cl7hY9MUIo2bRWuud8zmD4g_fBxMx6cKnmYwtj-NjgbCfSOzYoz'
+  const spamWebhookUrl = process.env.DISCORD_SPAM_WEBHOOK || 'https://discord.com/api/webhooks/1378615327851675769/VOATvHtlI7Aw-3RV6cl7hY9MUIo2bRWuud8zmD4g_fBxMx6cKnmYwtj-NjgbCfSOzYoz' // Default to spam if no main
   
-  if (spamWebhookUrl) {
-    console.log('🚀 Attempting Discord webhook with spam filtering...')
+  if (mainWebhookUrl || spamWebhookUrl) { // Proceed if at least one webhook is configured
+    console.log('🚀 Attempting Discord webhook with multi-stage spam filtering...')
     
-    // Analyze the message for spam
-    const spamAnalysis = analyzeSpamLevel({ name, email, subject, message })
-    console.log('🔍 Spam analysis result:', spamAnalysis)
+    // STAGE 2 (Continued): Call the now ASYNCHRONOUS spam analysis
+    const spamAnalysis = await analyzeSpamLevel({ name, email, subject, message })
+    console.log('🔍 Advanced Spam Analysis Result:', spamAnalysis)
     
-    // Route to appropriate channel
-    const webhookUrl = (spamAnalysis.isSpam || !mainWebhookUrl) ? spamWebhookUrl : mainWebhookUrl
-    const channelType = (spamAnalysis.isSpam || !mainWebhookUrl) ? 'SPAM' : 'MAIN'
-    
-    console.log(`📤 Routing to ${channelType} channel (score: ${spamAnalysis.score}/10)`)
-    
-    const discordSent = await sendViaDiscord({ 
-      name, email, subject, message, 
-      spamAnalysis, channelType 
-    }, webhookUrl)
-    
-    if (discordSent) {
-      console.log('✅ Discord webhook successful - email sending not needed')
-      return true
+    // Determine target webhook and channel type
+    let targetWebhookUrl = spamWebhookUrl // Default to spam channel
+    let channelType = 'SPAM'
+
+    if (mainWebhookUrl && !spamAnalysis.isSpam) {
+      targetWebhookUrl = mainWebhookUrl
+      channelType = 'MAIN'
+    } else if (!mainWebhookUrl && !spamWebhookUrl) {
+        console.log('🤷 No Discord webhooks configured. Skipping Discord notification.')
+        // Fall through to email backups if any, or just log
+    } else if (!targetWebhookUrl) { // Safety net if logic is off
+        console.log('⚠️ Could not determine target webhook, defaulting to spam if available or logging.')
+        targetWebhookUrl = spamWebhookUrl // Try spam one last time
+    }
+
+    if (targetWebhookUrl) {
+        console.log(`📤 Routing to ${channelType} channel (Score: ${spamAnalysis.score}/15) using webhook ending in ...${targetWebhookUrl.slice(-10)}`)
+        
+        const discordSent = await sendViaDiscord({ 
+          name, email, subject, message, 
+          spamAnalysis, channelType 
+        }, targetWebhookUrl)
+        
+        if (discordSent) {
+          console.log('✅ Discord notification successful. No further action needed.')
+          return true // Primary notification succeeded
+        } else {
+          console.log('❌ Discord webhook failed. Will attempt email fallbacks if configured.')
+        }
     } else {
-      console.log('❌ Discord webhook failed - trying other options')
+        console.log('🚫 No suitable Discord webhook URL to send to. Logging submission.')
     }
   }
   
+  // Fallback to email services ONLY if Discord fails or isn't configured
+  console.log('↪️ Discord notification failed or not configured. Attempting email fallbacks...')
+
   // OPTION 2: SendGrid (if available)
   if (process.env.SENDGRID_API_KEY) {
     console.log('Attempting SendGrid...')
-    return await sendViaSendGrid({ name, email, subject, message })
+    const sgSent = await sendViaSendGrid({ name, email, subject, message })
+    if (sgSent) return true
   }
   
-  // OPTION 3: Resend (if available)
   if (process.env.RESEND_API_KEY) {
     console.log('Attempting Resend...')
-    return await sendViaResend({ name, email, subject, message })
+    const rsSent = await sendViaResend({ name, email, subject, message })
+    if (rsSent) return true
   }
   
-  // OPTION 4: Gmail SMTP (if available)
   if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
     console.log('Attempting Gmail SMTP...')
-    return await sendViaGmail({ name, email, subject, message })
+    const gmSent = await sendViaGmail({ name, email, subject, message })
+    if (gmSent) return true
   }
   
-  // No notification service worked - log everything for manual follow-up
-  console.log('⚠️ No notification service worked. Contact details logged for manual outreach.')
-  console.log('📋 Complete contact form submission:')
+  // If all notification methods fail, log everything for manual follow-up
+  console.log('⚠️ All notification methods (Discord & Email) failed. Contact details logged for manual outreach.')
+  console.log('📋 Complete contact form submission for manual follow-up:')
   console.log(`Name: ${name}`)
   console.log(`Email: ${email}`)
   console.log(`Subject: ${subject}`)
   console.log(`Message: ${message}`)
   console.log(`Timestamp: ${new Date().toISOString()}`)
-  console.log('👆 Manual follow-up required via email or LinkedIn')
+  console.log('👆 Manual follow-up required.')
   
-  // Return false to trigger the manual logging path
-  return false
+  return false // Indicates all notification attempts failed
 }
 
-// AGGRESSIVE SPAM ANALYSIS SYSTEM - No mercy for spam!
-function analyzeSpamLevel({ name, email, subject, message }) {
+// AGGRESSIVE SPAM ANALYSIS SYSTEM - Now with OOPSpam API integration
+async function analyzeSpamLevel({ name, email, subject, message }) {
   let spamScore = 0
   const flags = []
-  
+  let externalFilterScore = 0
+  let externalFilterDetails = 'N/A'
+
   // Combine all text for analysis
   const allText = `${name} ${subject} ${message}`.toLowerCase()
   const emailDomain = email.split('@')[1]?.toLowerCase() || ''
   const emailLocal = email.split('@')[0]?.toLowerCase() || ''
-  
+
+  // --- STAGE 1: OUR CUSTOM HEURISTICS (Applied first) ---
+
   // 1. INSTANT SPAM DOMAINS (5 points - almost always spam)
   const bannedDomains = [
     'tk', 'ml', 'ga', 'cf', 'suslink.tk', 'guerrillamail.com', 'mailinator.com',
-    'tempmail.org', 'yopmail.com', 'throwaway.email', 'temp-mail.org', 
+    'tempmail.org', 'yopmail.com', 'throwaway.email', 'temp-mail.org',
     'dispostable.com', 'getairmail.com', 'sharklasers.com', 'trashmail.com'
   ]
-  
   if (bannedDomains.some(domain => emailDomain.includes(domain))) {
     spamScore += 5
     flags.push(`High-risk domain: ${emailDomain}`)
   }
-  
+
   // 2. OBVIOUS SPAM CONTENT (4 points each - hard spam)
   const hardSpamKeywords = [
-    'buy now', 'click here', 'free money', 'make money fast', 'viagra', 
+    'buy now', 'click here', 'free money', 'make money fast', 'viagra',
     'casino online', 'lottery winner', 'crypto investment', 'get rich quick',
     'limited time offer', 'act now', 'guaranteed income', '$$$', 'bitcoin',
     'forex', 'investment opportunity', 'work from home', 'earn cash',
     'no experience required', 'double your money', 'winner', 'congratulations',
     'claim your prize', 'selected', 'million dollars', 'inheritance'
   ]
-  
   hardSpamKeywords.forEach(keyword => {
     if (allText.includes(keyword)) {
       spamScore += 4
       flags.push(`Hard spam keyword: "${keyword}"`)
     }
   })
-  
-  // 3. GIBBERISH/REPEATED CHARACTERS (3 points - obvious spam)
-  if (/(.)\1{6,}/gi.test(allText)) {  // 6+ repeated chars (was 10+)
+
+  // 3. GIBBERISH/REPEATED CHARACTERS (3 points)
+  if (/(.)\1{6,}/gi.test(allText)) {
     spamScore += 3
     flags.push('Excessive repeated characters (gibberish)')
   }
@@ -340,21 +362,66 @@ function analyzeSpamLevel({ name, email, subject, message }) {
     flags.push('Well-structured message')
   }
   
+  // --- STAGE 2: EXTERNAL SPAM FILTER (OOPSpam API) ---
+  if (process.env.OOPSPAM_API_KEY) {
+    try {
+      console.log('🔍 Calling OOPSpam API...')
+      const oopspamResponse = await fetch('https://oopspam.com/v1/spamdetection', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': process.env.OOPSPAM_API_KEY
+        },
+        body: JSON.stringify({
+          senderIP: '127.0.0.1', // Placeholder, Vercel might provide real IP
+          email: email,
+          content: message,
+          // We can add more fields like 'name' or 'subject' if API supports
+        })
+      })
+
+      if (oopspamResponse.ok) {
+        const oopspamResult = await oopspamResponse.json()
+        console.log('💡 OOPSpam API Result:', oopspamResult)
+        externalFilterScore = oopspamResult.Score || 0 // OOPSpam score (0-6, higher is more spammy)
+        externalFilterDetails = `OOPSpam (${oopspamResult.Score}/6): ${oopspamResult.Details || 'No details'}`
+        flags.push(externalFilterDetails)
+        
+        // Integrate OOPSpam score into our system (e.g., add to our score directly or use a multiplier)
+        // OOPSpam: 0-1 (Not spam), 2-3 (Suspicious), 4 (Likely spam), 5-6 (Spam)
+        if (externalFilterScore >= 5) spamScore += 4; // High confidence spam from OOPSpam
+        else if (externalFilterScore >= 4) spamScore += 3;
+        else if (externalFilterScore >= 2) spamScore += 1;
+
+      } else {
+        console.error('❌ OOPSpam API Error:', oopspamResponse.status, await oopspamResponse.text())
+        flags.push('OOPSpam API call failed')
+      }
+    } catch (error) {
+      console.error('💥 Error calling OOPSpam API:', error)
+      flags.push('OOPSpam API exception')
+    }
+  }
+
+  // --- STAGE 3: FINAL VERDICT (Combine scores) ---
+
   // 7. DETERMINE SPAM STATUS (More aggressive thresholds)
-  const isSpam = spamScore >= 3  // Lowered from 4 (more aggressive)
-  const riskLevel = spamScore >= 8 ? 'CRITICAL' : 
-                   spamScore >= 6 ? 'HIGH' : 
-                   spamScore >= 4 ? 'MEDIUM' : 
+  const isSpam = spamScore >= 4 // Adjusted threshold, OOPSpam adds to this
+  const riskLevel = spamScore >= 10 ? 'EXTREME' : // New level for very high scores
+                   spamScore >= 8 ? 'CRITICAL' :
+                   spamScore >= 6 ? 'HIGH' :
+                   spamScore >= 4 ? 'MEDIUM' :
                    spamScore >= 2 ? 'LOW' : 'CLEAN'
   
   return {
-    score: Math.min(spamScore, 10),
+    score: Math.min(spamScore, 15), // Allow higher scores now with combined system
     isSpam,
     riskLevel,
     flags,
     recommendation: isSpam ? 'Route to spam channel' : 'Route to main channel',
-    confidence: spamScore >= 6 ? 'High confidence spam' : 
-               spamScore >= 4 ? 'Likely spam' : 
+    confidence: spamScore >= 8 ? 'Very high confidence spam' :
+               spamScore >= 6 ? 'High confidence spam' :
+               spamScore >= 4 ? 'Likely spam' :
                spamScore >= 2 ? 'Suspicious' : 'Legitimate'
   }
 }

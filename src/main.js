@@ -685,7 +685,20 @@ const handleContactForm = async (e) => {
       }, 3000)
       
     } else {
-      throw new Error(result.message || 'Failed to send message')
+      // Check for the specific instant spam rejection message
+      if (result.message && result.message.includes('high-confidence spam')) {
+        showFormErrors([result.message]) // Display the specific backend message
+      } else {
+        throw new Error(result.message || 'Failed to send message')
+      }
+      // Keep button in error state for instant spam too
+      btn.innerHTML = '<span>Submission Blocked</span>'
+      btn.style.background = '#ef4444' // Red
+      setTimeout(() => {
+        btn.innerHTML = originalText
+        btn.disabled = false
+        btn.style.background = 'var(--primary)'
+      }, 4000)
     }
     
   } catch (error) {
