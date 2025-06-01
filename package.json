@@ -1,4 +1,3 @@
-
 {
   "name": "jose-rodriguez-portfolio",
   "description": "Portfolio website for Jose Rodriguez - Aspiring Mechanical Engineer",
@@ -23,6 +22,8 @@
     "projects"
   ],
   "dependencies": {
+    "@vercel/analytics": "^1.5.0",
+    "@vercel/speed-insights": "^1.2.0",
     "react-icons": "^5.5.0"
   }
 }

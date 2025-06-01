@@ -1,6 +1,14 @@
 import './style.css'
 import { renderProjects, renderAbout, renderContact } from './components/Views.js'
 import { renderProjectModal } from './components/ProjectCard.js'
+import { analytics } from '@vercel/analytics'
+import { speedInsights } from '@vercel/speed-insights'
+import { 
+  ANALYTICS_CONFIG, 
+  trackPerformance, 
+  initScrollTracking, 
+  initSessionTracking 
+} from './data/analytics.js'
 
 /*
 ===========================================
@@ -261,6 +269,14 @@ const filterProjects = (category) => {
   const filterButtons = document.querySelectorAll('.filter-btn')
   const resetButton = document.querySelector('.filter-reset')
   
+  // Track filter usage analytics
+  analytics.track('Project Filter Used', {
+    category: category,
+    previousFilters: [...currentFilters],
+    timestamp: new Date().toISOString(),
+    device: isMobile() ? 'mobile' : 'desktop'
+  })
+  
   // Handle multi-select logic
   if (category === 'All') {
     currentFilters = ['All']
@@ -387,6 +403,13 @@ const toggleTheme = () => {
   document.body.setAttribute('data-theme', isDarkMode ? 'dark' : 'light')
   localStorage.setItem('theme', isDarkMode ? 'dark' : 'light')
   
+  // Track theme change analytics
+  analytics.track('Theme Changed', {
+    newTheme: isDarkMode ? 'dark' : 'light',
+    timestamp: new Date().toISOString(),
+    device: isMobile() ? 'mobile' : 'desktop'
+  })
+  
   // Update the icon
   const themeIcon = document.querySelector('.theme-icon')
   if (themeIcon) {
@@ -432,6 +455,14 @@ const renderHeader = () => {
 const handleNavigation = (view) => {
   if (view === currentView) return
   
+  // Track navigation analytics
+  analytics.track('Page Navigation', {
+    from: currentView,
+    to: view,
+    timestamp: new Date().toISOString(),
+    device: isMobile() ? 'mobile' : 'desktop'
+  })
+  
   // Don't show loading on mobile to prevent content appearing below fold
   if (!isMobile()) {
     showLoading()
@@ -468,6 +499,15 @@ const handleNavigation = (view) => {
 const handleProjectClick = (projectId) => {
   const project = portfolioData.projects.find(p => p.id === parseInt(projectId))
   if (project) {
+    // Track project view analytics
+    analytics.track('Project Viewed', {
+      projectId: project.id,
+      projectTitle: project.title,
+      category: project.category,
+      timestamp: new Date().toISOString(),
+      device: isMobile() ? 'mobile' : 'desktop'
+    })
+    
     showProjectModal(project)
   }
 }
@@ -727,6 +767,16 @@ const handleContactForm = async (e) => {
       incrementSubmissionCount() // Track successful submission in cookie
       logFormInteraction('success', data) // Use real success logging
       
+      // Track successful contact form submission
+      analytics.track('Contact Form Submitted', {
+        timestamp: new Date().toISOString(),
+        nameLength: data.name.length,
+        emailDomain: data.email.split('@')[1] || 'unknown',
+        subjectLength: data.subject.length,
+        messageLength: data.message.length,
+        device: isMobile() ? 'mobile' : 'desktop'
+      })
+      
       // Show success state
       btn.innerHTML = '<span>Message Sent Successfully!</span>'
       console.log("Users Message Was Sent Succussfully") //this is fake – the real one won't do this
@@ -923,6 +973,13 @@ const addEventListeners = () => {
   if (professionalNetworkLink) {
     // Add enhanced click tracking and fallback
     professionalNetworkLink.addEventListener('click', (e) => {
+      // Track LinkedIn click analytics
+      analytics.track('LinkedIn Profile Clicked', {
+        timestamp: new Date().toISOString(),
+        device: isMobile() ? 'mobile' : 'desktop',
+        referrer: document.referrer || 'direct'
+      })
+      
       // Let the normal link work, but add fallback handling
       // Minimal obfuscation: TGlua2VkSW4= is base64 for "LinkedI n"
       const platform = atob('TGlua2VkSW4=') 
@@ -947,6 +1004,37 @@ const addEventListeners = () => {
 
 // Initialize the application with enhanced features
 const init = () => {
+  // Initialize comprehensive analytics tracking
+  const performanceData = trackPerformance()
+  
+  // Initialize Vercel Analytics and Speed Insights
+  analytics.track('Portfolio Loaded', {
+    timestamp: new Date().toISOString(),
+    userAgent: navigator.userAgent.substring(0, 50),
+    viewport: `${window.innerWidth}x${window.innerHeight}`,
+    theme: isDarkMode ? 'dark' : 'light',
+    ...performanceData,
+    ...ANALYTICS_CONFIG.customDimensions
+  })
+  
+  speedInsights.track('Page Load', {
+    page: 'portfolio',
+    loadTime: performance.now(),
+    ...ANALYTICS_CONFIG.customDimensions
+  })
+  
+  // Initialize advanced tracking features
+  if (ANALYTICS_CONFIG.trackScrollDepth) {
+    window.scrollTracker = initScrollTracking()
+  }
+  
+  if (ANALYTICS_CONFIG.trackSessionData) {
+    window.sessionTracker = initSessionTracking()
+  }
+  
+  // Make analytics available globally for other functions
+  window.analytics = analytics
+  
   // Set initial theme from localStorage
   const savedTheme = localStorage.getItem('theme')
   if (savedTheme) {
@@ -969,6 +1057,8 @@ const init = () => {
   console.log('📊 Project data loaded from: src/data/projects.js')
   console.log('👤 About data loaded from: src/data/about.js') 
   console.log('⚙️  Settings loaded from: src/data/settings.js')
+  console.log('📈 Analytics and Speed Insights enabled')
+  console.log('🎯 Advanced tracking: scroll depth, session data, performance metrics')
   if (!isMobile()) {
     console.log('⌨️  Keyboard shortcuts available: Ctrl+1, Ctrl+2, Ctrl+3, Ctrl+\\')
   }
