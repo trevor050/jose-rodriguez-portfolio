@@ -164,25 +164,19 @@ export const renderContact = () => {
         <h2>Contact Information</h2>
         <p>I welcome opportunities to discuss engineering projects, collaboration possibilities, and academic opportunities. Please feel free to reach out regarding my work or potential connections in the mechanical engineering field.</p>
         
-        <form class="contact-form" id="contact-form">
-          <div class="form-group fade-in-left">
-            <label for="name">Name *</label>
-            <input 
-              type="text" 
-              id="name" 
-              name="name" 
-              required 
-              minlength="2"
-              maxlength="100"
-              title="Please enter a valid name"
-              placeholder="Your full name"
-              autocomplete="name"
-              aria-describedby="name-help"
-            >
-            <small id="name-help" class="sr-only">Enter your full name for professional correspondence</small>
+        <form id="contact-form" class="contact-form">
+          <!-- Honeypot field - invisible to humans, bots might fill it -->
+          <div style="position: absolute; left: -9999px; opacity: 0; pointer-events: none;" aria-hidden="true">
+            <label for="website">Website (leave blank):</label>
+            <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
           </div>
           
-          <div class="form-group fade-in-right">
+          <div class="form-group">
+            <label for="name">Name *</label>
+            <input type="text" id="name" name="name" required>
+          </div>
+          
+          <div class="form-group fade-in-left">
             <label for="email">Email Address *</label>
             <input 
               type="email" 

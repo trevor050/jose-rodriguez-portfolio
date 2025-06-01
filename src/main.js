@@ -56,15 +56,14 @@ let currentView = 'projects'
 let isDarkMode = true
 let currentFilters = ['All'] // Changed to array for multi-select
 
-// Anti-spam state management
+// CONSERVATIVE anti-spam state management - prioritizes NEVER blocking real opportunities
 let submissionAttempts = 0
 let lastSubmissionTime = 0
-let shadowBanned = false
-let shadowBanTime = 0
-const SUBMISSION_COOLDOWN = 30000 // 30 seconds between submissions
-const MAX_ATTEMPTS = 15 // Increased threshold before shadowban
-const MAX_SUCCESSFUL_SUBMISSIONS = 3 // Cookie-based limit
-const SHADOWBAN_DURATION = 2 * 60 * 60 * 1000 // 2 hours in milliseconds
+let suspiciousActivity = false
+let suspiciousCount = 0
+const SUBMISSION_COOLDOWN = 60000 // 1 minute between submissions (more lenient)
+const MAX_DAILY_SUBMISSIONS = 5 // More generous daily limit
+const SUSPICIOUS_THRESHOLD = 3 // Allow more attempts before flagging
 
 // Much more targeted profanity list (only truly inappropriate words)
 const PROFANITY_LIST = [
@@ -72,11 +71,11 @@ const PROFANITY_LIST = [
   'nigger', 'faggot', 'retard', 'nazi', 'kill yourself', 'kys'
 ]
 
-// Reduced spam keywords (only obvious promotional spam)
-const SPAM_KEYWORDS = [
+// VERY targeted spam keywords (only obvious promotional spam)
+const OBVIOUS_SPAM = [
   'buy now', 'click here', 'free money', 'make money fast', 'viagra', 
-  'casino online', 'lottery winner', 'congratulations winner', 
-  'crypto investment', 'get rich quick', 'earn $$$', 'limited time offer'
+  'casino online', 'lottery winner', 'crypto investment', 'get rich quick',
+  'limited time offer', 'act now', 'guaranteed income', '$$$'
 ]
 
 // Comprehensive disposable email domains (much better than TLD checking)
@@ -535,120 +534,84 @@ const closeProjectModal = () => {
   }
 }
 
-// Enhanced contact form validation with smart anti-spam measures
+// Honeypot detection
+const detectHoneypot = (formData) => {
+  // If the invisible "website" field is filled, it's likely a bot
+  if (formData.website && formData.website.trim() !== '') {
+    console.log('🍯 Honeypot triggered - likely bot submission')
+    return true
+  }
+  return false
+}
+
+// CONSERVATIVE content analysis - only blocks obvious spam
+const analyzeContentQuality = (data) => {
+  const allText = (data.name + ' ' + data.subject + ' ' + data.message).toLowerCase()
+  
+  // Only block if multiple obvious spam indicators
+  const spamIndicators = [
+    OBVIOUS_SPAM.some(spam => allText.includes(spam)),
+    /https?:\/\/[^\s]+\.(tk|ml|ga|cf)/gi.test(allText), // Suspicious domains
+    allText.length < 20, // Extremely short messages
+    /(.)\1{10,}/gi.test(allText), // Excessive repeated characters
+    /[^\w\s@.-]{5,}/gi.test(allText) // Too many special characters
+  ]
+  
+  const spamScore = spamIndicators.filter(Boolean).length
+  return spamScore >= 3 // Need multiple indicators to block
+}
+
+// Enhanced contact form validation with CONSERVATIVE anti-spam measures
 const validateContactForm = (data) => {
   const errors = []
   
-  // Check if shadowban has expired
-  checkShadowBanExpiry()
-  
-  // Check if shadowbanned
-  if (shadowBanned) {
-    return ['Your submission could not be processed. Please try again later.']
+  // 1. HONEYPOT CHECK - Silent bot detection
+  if (detectHoneypot(data)) {
+    // Don't show error, just silently reject
+    return ['Please try again in a moment.']
   }
   
-  // Cookie-based submission limit check
-  const submissionCount = getSubmissionCount()
-  if (submissionCount >= MAX_SUCCESSFUL_SUBMISSIONS) {
-    return ['Maximum number of submissions reached for today. Please try again tomorrow.']
-  }
-  
-  // Rate limiting check
+  // 2. Rate limiting check (more lenient)
   const now = Date.now()
   if (now - lastSubmissionTime < SUBMISSION_COOLDOWN) {
-    return ['Please wait 30 seconds between submissions.']
+    const waitTime = Math.ceil((SUBMISSION_COOLDOWN - (now - lastSubmissionTime)) / 1000)
+    return [`Please wait ${waitTime} seconds between submissions.`]
   }
   
-  // Unicode-friendly name validation (supports accents, diacritics, non-Latin alphabets)
+  // 3. Daily submission limit (generous)
+  const submissionCount = getSubmissionCount()
+  if (submissionCount >= MAX_DAILY_SUBMISSIONS) {
+    return ['Daily submission limit reached. Please try again tomorrow or contact via LinkedIn.']
+  }
+  
+  // 4. Basic validation (required fields)
   if (!data.name || data.name.trim().length < 2) {
     errors.push('Name must be at least 2 characters long')
   }
-  if (data.name && data.name.length > 100) {
-    errors.push('Name must be less than 100 characters')
-  }
-  // New Unicode-friendly regex that allows letters, marks, spaces, periods, hyphens, apostrophes
-  if (data.name && !/^[\p{L}\p{M} .'-]{2,100}$/u.test(data.name)) {
-    errors.push('Name contains invalid characters')
-  }
-  
-  // Enhanced email validation with disposable domain checking
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
-  if (!data.email || !emailRegex.test(data.email)) {
+  if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
     errors.push('Please enter a valid email address')
   }
-  if (data.email && data.email.length > 254) {
-    errors.push('Email address is too long')
-  }
-  
-  // Check for disposable email domains (much better than TLD checking)
-  if (data.email && emailRegex.test(data.email)) {
-    const emailParts = data.email.toLowerCase().split('@')
-    if (emailParts.length === 2) {
-      const domain = emailParts[1]
-      if (DISPOSABLE_DOMAINS.includes(domain)) {
-        errors.push('Please use a permanent email address')
-      }
-    }
-  }
-  
-  // Subject validation
   if (!data.subject || data.subject.trim().length < 3) {
     errors.push('Subject must be at least 3 characters long')
   }
-  if (data.subject && data.subject.length > 200) {
-    errors.push('Subject must be less than 200 characters')
-  }
-  
-  // Message validation
   if (!data.message || data.message.trim().length < 10) {
     errors.push('Message must be at least 10 characters long')
   }
-  if (data.message && data.message.length > 2000) {
-    errors.push('Message must be less than 2000 characters')
-  }
   
-  // Normalize text for analysis (removes funky Unicode tricks)
-  const allText = (data.name + ' ' + data.subject + ' ' + data.message)
-    .normalize('NFKD') // Normalize Unicode
-    .toLowerCase()
-  
-  // Smart profanity filter with word boundaries and punctuation handling
-  const cleanText = allText.replace(/[^\p{L}\p{N}\s]/gu, ' ') // Remove punctuation for analysis
-  const foundProfanity = PROFANITY_LIST.some(badWord => {
-    const wordBoundaryRegex = new RegExp(`\\b${badWord}(?:s|ing)?\\b`, 'i')
-    return wordBoundaryRegex.test(cleanText)
-  })
-  if (foundProfanity) {
-    errors.push('Message contains inappropriate language')
-  }
-  
-  // Smart spam keyword detection with word boundaries
-  const foundSpam = SPAM_KEYWORDS.some(keyword => {
-    const keywordRegex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i')
-    return keywordRegex.test(allText)
-  })
-  if (foundSpam) {
-    errors.push('Message appears to contain promotional content')
-  }
-  
-  // Improved suspicious URL detection
-  const foundSuspiciousUrl = SUSPICIOUS_URL_PATTERNS.some(pattern => {
-    pattern.lastIndex = 0 // Reset regex state
-    return pattern.test(allText)
-  })
-  if (foundSuspiciousUrl) {
-    errors.push('Message contains suspicious links')
-  }
-  
-  // Relaxed repeated character detection (alphabetic only, 7+ repetitions)
-  if (/([a-zA-Z])\1{6,}/gi.test(allText)) {
-    errors.push('Message contains excessive repeated characters')
-  }
-  
-  // Emoji spam detection (more than 10 emojis is probably spam)
-  const emojiCount = (allText.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu) || []).length
-  if (emojiCount > 10) {
-    errors.push('Message contains too many emojis')
+  // 5. CONSERVATIVE content quality check
+  if (analyzeContentQuality(data)) {
+    // Log for manual review but don't block immediately
+    console.warn('⚠️ Suspicious content detected - manual review recommended:', {
+      name: data.name.substring(0, 10) + '...',
+      email: data.email.split('@')[1] || 'unknown',
+      contentLength: data.message.length,
+      timestamp: new Date().toISOString()
+    })
+    
+    suspiciousCount++
+    if (suspiciousCount > SUSPICIOUS_THRESHOLD) {
+      errors.push('Your message appears to contain promotional content. Please revise and try again.')
+    }
   }
   
   return errors
@@ -707,29 +670,9 @@ const submitContactForm = async (data) => {
   }
 }
 
-// Enhanced contact form handler with anti-spam and shadowbanning
+// Enhanced contact form handler with backup logging for missed opportunities
 const handleContactForm = async (e) => {
   e.preventDefault()
-  
-  // Check shadowban expiry before processing
-  checkShadowBanExpiry()
-  
-  // Immediate shadowban check
-  if (shadowBanned) {
-    const btn = e.target.querySelector('.btn')
-    btn.innerHTML = '<span>Message Sent Successfully!</span>'
-    logFormInteraction('shadow') // Use sneaky logging
-    btn.style.background = 'var(--accent)'
-    
-    // Reset appearance after delay (fake success)
-    setTimeout(() => {
-      btn.innerHTML = '<span>Send Message</span>'
-      btn.disabled = false
-      btn.style.background = 'var(--primary)'
-      e.target.reset()
-    }, 3000)
-    return // Silently block submission
-  }
   
   const formData = new FormData(e.target)
   const data = Object.fromEntries(formData)
@@ -737,17 +680,28 @@ const handleContactForm = async (e) => {
   // Validate form data
   const validationErrors = validateContactForm(data)
   if (validationErrors.length > 0) {
-    submissionAttempts++
     
-    // Check for shadowban threshold
-    if (submissionAttempts >= MAX_ATTEMPTS) {
-      shadowBanned = true
-      shadowBanTime = Date.now() // Record when shadowban started
-      // Don't show any indication of shadowban to user
-      showFormErrors(['Please check your information and try again.'])
+    // CRITICAL: Log blocked submissions for manual review
+    if (validationErrors.some(error => error.includes('promotional content') || error.includes('Please try again'))) {
+      console.log('🚨 BLOCKED SUBMISSION - MANUAL REVIEW NEEDED:', {
+        submission: {
+          name: data.name,
+          email: data.email,
+          subject: data.subject,
+          message: data.message.substring(0, 200) + '...',
+          timestamp: new Date().toISOString(),
+          reason: validationErrors.join(', ')
+        },
+        note: 'This submission was blocked but may be legitimate. Consider manual follow-up.'
+      })
+      
+      // Show softer error message
+      showFormErrors(['Your message needs review. Please try contacting via LinkedIn if urgent.'])
     } else {
       showFormErrors(validationErrors)
     }
+    
+    submissionAttempts++
     return
   }
   
@@ -760,7 +714,6 @@ const handleContactForm = async (e) => {
   clearFormErrors()
   
   try {
-    // Only submit if not shadowbanned
     const result = await submitContactForm(data)
     
     if (result.success) {
@@ -768,7 +721,6 @@ const handleContactForm = async (e) => {
       lastSubmissionTime = Date.now()
       submissionAttempts = 0 // Reset on successful submission
       incrementSubmissionCount() // Track successful submission in cookie
-      logFormInteraction('success', data) // Use real success logging
       
       // Track successful contact form submission
       track('Contact Form Submitted', {
@@ -782,7 +734,6 @@ const handleContactForm = async (e) => {
       
       // Show success state
       btn.innerHTML = '<span>Message Sent Successfully!</span>'
-      console.log("Users Message Was Sent Succussfully") //this is fake – the real one won't do this
       btn.style.background = 'var(--accent)'
       
       // Reset form after delay
@@ -799,13 +750,20 @@ const handleContactForm = async (e) => {
     
   } catch (error) {
     console.error('Contact form error:', error)
-    submissionAttempts++
     
-    // Check for shadowban threshold
-    if (submissionAttempts >= MAX_ATTEMPTS) {
-      shadowBanned = true
-      shadowBanTime = Date.now() // Record when shadowban started
-    }
+    // Log failed submissions too (might be infrastructure issues)
+    console.log('📧 FAILED SUBMISSION - CHECK INFRASTRUCTURE:', {
+      submission: {
+        name: data.name,
+        email: data.email,
+        subject: data.subject,
+        message: data.message.substring(0, 100) + '...',
+        timestamp: new Date().toISOString(),
+        error: error.message
+      }
+    })
+    
+    submissionAttempts++
     
     // Show error state
     btn.innerHTML = '<span>Failed to Send - Try Again</span>'
