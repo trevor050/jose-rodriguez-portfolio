@@ -617,37 +617,30 @@ const validateContactForm = (data) => {
   return errors
 }
 
-// Backend API - Formspree Integration (Uses environment variable)
+// Backend API - Our Own Vercel Function (Much better than overpriced Formspree!)
 const submitContactForm = async (data) => {
   try {
-    // Get form ID from environment variable (Vite format)
-    const FORM_ID = import.meta.env.VITE_CONTACT_FORM || 'mblyrbkg' // fallback to current ID
-    const FORMSPREE_ENDPOINT = `https://formspree.io/f/${FORM_ID}`
-    
-    // Prepare form data
-    const formData = {
-      name: data.name.trim(),
-      email: data.email.trim().toLowerCase(),
-      subject: data.subject.trim(),
-      message: data.message.trim(),
-      _replyto: data.email.trim().toLowerCase(),
-      _subject: `Portfolio Contact: ${data.subject.trim()}`
-    }
-    
-    const response = await fetch(FORMSPREE_ENDPOINT, {
+    const response = await fetch('/api/contact', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(formData)
+      body: JSON.stringify({
+        name: data.name.trim(),
+        email: data.email.trim().toLowerCase(),
+        subject: data.subject.trim(),
+        message: data.message.trim(),
+        website: data.website || '' // Honeypot field
+      })
     })
     
-    if (response.ok) {
-      return { success: true, message: 'Message sent successfully! I\'ll get back to you soon.' }
+    const result = await response.json()
+    
+    if (response.ok && result.success) {
+      return { success: true, message: result.message }
     } else {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Failed to send message')
+      throw new Error(result.error || 'Failed to send message')
     }
     
   } catch (error) {

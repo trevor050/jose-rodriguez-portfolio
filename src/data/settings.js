@@ -83,9 +83,9 @@ export const siteInfo = {
   
   // Contact Form Settings
   contactForm: {
-    maxSubmissionsPerDay: 3,
-    enableSpamProtection: true,
-    formspreeEndpoint: "https://formspree.io/f/mblyrbkg" // Your Formspree endpoint
+    maxSubmissionsPerDay: 5,
+    enableSpamProtection: true
+    // Using our own Vercel API instead of overpriced Formspree!
   }
 }
 
