@@ -1,22 +1,16 @@
 // Vercel Serverless Function for Contact Form
-// THE ULTIMATE ANTI-TROLL SYSTEM - Multi-Layer Defense
-import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from 'obscenity'
-import Sentiment from 'sentiment'
-import TextModerate from 'text-moderate'
+// ENHANCED USER TRACKING + CONTENTGUARD INTEGRATION
+import pkg from 'content-guard'
+const { createGuard } = pkg
 
-// Initialize professional anti-troll libraries
-const profanityMatcher = new RegExpMatcher({
-  ...englishDataset.build(),
-  ...englishRecommendedTransformers,
+// Initialize ContentGuard with balanced variant for good accuracy and reasonable speed
+const contentGuard = createGuard('balanced', {
+  spamThreshold: 5 // Standard threshold for contact forms
 })
 
-const sentiment = new Sentiment()
-const textModerate = new TextModerate()
-
-console.log('🛡️ Ultimate Anti-Troll System Initialized')
-console.log('  ↳ Obscenity: Advanced profanity detection')
-console.log('  ↳ Sentiment: AFINN-based hostility analysis') 
-console.log('  ↳ TextModerate: Multi-language toxicity detection')
+console.log('🛡️ ContentGuard Spam Detection System Initialized')
+console.log('  ↳ Variant: Balanced (~0.3ms, 93%+ accuracy)')
+console.log('  ↳ Spam Threshold: 5')
 
 export default async function handler(req, res) {
   // Only allow POST requests
@@ -39,7 +33,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, message: 'Message received.' })
     }
 
-    // STAGE 1: INSTANT OBLITERATION FOR 1000% SPAM
+    // STAGE 1: COLLECT COMPREHENSIVE USER HEURISTICS
+    const userHeuristics = await collectUserHeuristics(req)
+    console.log('📊 User heuristics collected:', JSON.stringify(userHeuristics, null, 2))
+
+    // STAGE 2: INSTANT SPAM DETECTION FOR 1000% OBVIOUS SPAM
     const instantSpamVerdict = isInstantSpam({ name, email, subject, message })
     if (instantSpamVerdict.isSpam) {
       console.log('🗑️ INSTANT SPAM REJECTION:', instantSpamVerdict.reason)
@@ -49,7 +47,7 @@ export default async function handler(req, res) {
       })
     }
 
-    // STAGE 2: BASIC VALIDATION
+    // STAGE 3: BASIC VALIDATION
     const errors = []
     
     if (!name || name.trim().length < 2) {
@@ -69,28 +67,29 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: errors.join(', ') })
     }
 
-    // IP-based rate limiting (basic implementation)
-    const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress
-    // You'd ideally use a proper rate limiting solution (Redis, etc.) in production
-    console.log('Client IP for potential rate limiting:', clientIP)
+    // STAGE 4: CONTENTGUARD SPAM ANALYSIS
+    console.log('🛡️ Running ContentGuard analysis...')
+    const contentGuardResult = await analyzeWithContentGuard({ name, email, subject, message })
+    console.log('🛡️ ContentGuard Result:', contentGuardResult)
 
-    // STAGE 3: ULTIMATE ANTI-TROLL ANALYSIS & ROUTING (Discord)
-    const emailSent = await sendEmail({ // sendEmail now handles ultimate anti-troll filtering & Discord routing
+    // STAGE 5: SEND EMAIL WITH ENHANCED REPORTING
+    const emailSent = await sendEmail({ 
       name: name.trim(),
       email: email.trim().toLowerCase(),
       subject: subject.trim(),
-      message: message.trim()
+      message: message.trim(),
+      userHeuristics,
+      contentGuardResult
     })
 
     if (emailSent) {
-      console.log('✅ Discord notification process completed.')
+      console.log('✅ Enhanced notification process completed.')
       return res.status(200).json({
         success: true,
         message: 'Message sent successfully! I\'ll get back to you soon.'
       })
     } else {
-      // This path is taken if Discord fails AND all email fallbacks fail
-      console.log('❌ All notification methods failed (Discord and email fallbacks).')
+      console.log('❌ All notification methods failed.')
       return res.status(500).json({
         error: 'Failed to send message due to an internal issue. Please try LinkedIn.'
       })
@@ -104,7 +103,255 @@ export default async function handler(req, res) {
   }
 }
 
-// HELPER: INSTANT SPAM DETECTION (1000% SPAM)
+// ENHANCED USER HEURISTICS COLLECTION
+async function collectUserHeuristics(req) {
+  const headers = req.headers
+  const ip = headers['x-forwarded-for'] || 
+             headers['x-real-ip'] || 
+             req.connection?.remoteAddress || 
+             req.socket?.remoteAddress || 
+             'unknown'
+
+  const userAgent = headers['user-agent'] || 'unknown'
+  const referer = headers['referer'] || headers['referrer'] || 'direct'
+  const acceptLanguage = headers['accept-language'] || 'unknown'
+  const acceptEncoding = headers['accept-encoding'] || 'unknown'
+  const dnt = headers['dnt'] || 'unknown' // Do Not Track
+  const connection = headers['connection'] || 'unknown'
+  const cacheControl = headers['cache-control'] || 'unknown'
+  
+  // Parse User Agent for more details
+  const userAgentData = parseUserAgent(userAgent)
+  
+  // Attempt to get geolocation from IP (you can integrate with services like ipapi.co)
+  const geoData = await getGeoLocation(ip)
+  
+  // Calculate request timing
+  const timestamp = new Date().toISOString()
+  const timezone = headers['timezone'] || 'unknown' // If frontend sends this
+  
+  // Security-related headers
+  const securityHeaders = {
+    secFetchSite: headers['sec-fetch-site'],
+    secFetchMode: headers['sec-fetch-mode'], 
+    secFetchDest: headers['sec-fetch-dest'],
+    secFetchUser: headers['sec-fetch-user'],
+    secChUa: headers['sec-ch-ua'],
+    secChUaPlatform: headers['sec-ch-ua-platform'],
+    secChUaMobile: headers['sec-ch-ua-mobile']
+  }
+
+  return {
+    // Network Information
+    ip: ip,
+    ipType: ip.includes(':') ? 'IPv6' : 'IPv4',
+    
+    // User Agent Analysis
+    userAgent: userAgent,
+    ...userAgentData,
+    
+    // Request Details  
+    referer: referer,
+    acceptLanguage: acceptLanguage,
+    acceptEncoding: acceptEncoding,
+    connection: connection,
+    cacheControl: cacheControl,
+    dnt: dnt,
+    
+    // Geolocation
+    ...geoData,
+    
+    // Timing
+    timestamp: timestamp,
+    timezone: timezone,
+    
+    // Security Headers (helpful for bot detection)
+    ...securityHeaders,
+    
+    // Additional Analysis
+    isLikelyBot: detectBotBehavior(userAgent, headers),
+    riskScore: calculateInitialRiskScore(userAgent, ip, referer, headers)
+  }
+}
+
+// USER AGENT PARSING
+function parseUserAgent(userAgent) {
+  if (!userAgent || userAgent === 'unknown') {
+    return { 
+      browser: 'unknown', 
+      os: 'unknown', 
+      device: 'unknown',
+      isBot: true // Unknown UA is suspicious
+    }
+  }
+
+  const ua = userAgent.toLowerCase()
+  
+  // Browser detection
+  let browser = 'unknown'
+  if (ua.includes('chrome') && !ua.includes('edg')) browser = 'chrome'
+  else if (ua.includes('firefox')) browser = 'firefox'
+  else if (ua.includes('safari') && !ua.includes('chrome')) browser = 'safari'
+  else if (ua.includes('edg')) browser = 'edge'
+  else if (ua.includes('opera') || ua.includes('opr')) browser = 'opera'
+
+  // OS detection
+  let os = 'unknown'
+  if (ua.includes('windows')) os = 'windows'
+  else if (ua.includes('mac os x') || ua.includes('macos')) os = 'macos'
+  else if (ua.includes('linux')) os = 'linux'
+  else if (ua.includes('android')) os = 'android'
+  else if (ua.includes('iphone') || ua.includes('ipad')) os = 'ios'
+
+  // Device detection
+  let device = 'desktop'
+  if (ua.includes('mobile') || ua.includes('android')) device = 'mobile'
+  else if (ua.includes('tablet') || ua.includes('ipad')) device = 'tablet'
+
+  // Bot detection
+  const botIndicators = ['bot', 'crawler', 'spider', 'scraper', 'curl', 'wget', 'python', 'php']
+  const isBot = botIndicators.some(indicator => ua.includes(indicator))
+
+  return { browser, os, device, isBot }
+}
+
+// GEOLOCATION LOOKUP  
+async function getGeoLocation(ip) {
+  try {
+    // Skip for localhost/private IPs
+    if (ip === 'unknown' || ip.startsWith('127.') || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+      return { country: 'local', region: 'local', city: 'local' }
+    }
+
+    // You can integrate with services like:
+    // - ipapi.co (free tier available)
+    // - ipinfo.io 
+    // - ipgeolocation.io
+    // For now, we'll just log and return basic info
+    
+    console.log(`🌍 Would lookup geolocation for IP: ${ip}`)
+    
+    // Placeholder - you can implement actual API calls here
+    return {
+      country: 'unknown',
+      region: 'unknown', 
+      city: 'unknown',
+      timezone: 'unknown'
+    }
+    
+  } catch (error) {
+    console.error('Geolocation lookup failed:', error)
+    return { country: 'error', region: 'error', city: 'error' }
+  }
+}
+
+// BOT BEHAVIOR DETECTION
+function detectBotBehavior(userAgent, headers) {
+  const ua = (userAgent || '').toLowerCase()
+  
+  // Known bot patterns
+  const botPatterns = [
+    'bot', 'crawler', 'spider', 'scraper', 'curl', 'wget', 
+    'python', 'php', 'java', 'go-http-client', 'okhttp'
+  ]
+  
+  const hasbotPattern = botPatterns.some(pattern => ua.includes(pattern))
+  
+  // Suspicious header patterns
+  const hasMinimalHeaders = Object.keys(headers).length < 5
+  const missingCommonHeaders = !headers['accept'] || !headers['accept-language']
+  
+  return hasbotPattern || hasMinimalHeaders || missingCommonHeaders
+}
+
+// INITIAL RISK SCORING
+function calculateInitialRiskScore(userAgent, ip, referer, headers) {
+  let score = 0
+  
+  // User Agent risks
+  if (!userAgent || userAgent === 'unknown') score += 3
+  if (detectBotBehavior(userAgent, headers)) score += 2
+  
+  // IP risks  
+  if (ip === 'unknown') score += 2
+  
+  // Referer risks
+  if (referer === 'direct') score += 1 // Not necessarily bad, but worth noting
+  
+  // Header analysis
+  if (Object.keys(headers).length < 5) score += 2
+  
+  return Math.min(score, 10) // Cap at 10
+}
+
+// CONTENTGUARD INTEGRATION
+async function analyzeWithContentGuard({ name, email, subject, message }) {
+  console.log('🔍 Starting ContentGuard analysis...')
+  
+  try {
+    // Analyze the complete content
+    const contentToAnalyze = {
+      name: name,
+      email: email, 
+      subject: subject,
+      message: message
+    }
+    
+    const result = await contentGuard.analyze(contentToAnalyze)
+    
+    console.log(`🛡️ ContentGuard Analysis Complete:`)
+    console.log(`   ↳ Spam Status: ${result.isSpam ? 'SPAM' : 'CLEAN'}`)
+    console.log(`   ↳ Score: ${result.score}/10+`)
+    console.log(`   ↳ Confidence: ${result.confidence}`)
+    console.log(`   ↳ Risk Level: ${result.riskLevel}`)
+    console.log(`   ↳ Flags: ${result.flags?.length || 0}`)
+    
+    return {
+      isSpam: result.isSpam,
+      score: result.score,
+      confidence: result.confidence,
+      riskLevel: result.riskLevel,
+      flags: result.flags || [],
+      recommendation: result.recommendation,
+      variant: result.variant,
+      processingTime: result.metadata?.processingTime || 0,
+      rawResult: result
+    }
+    
+  } catch (error) {
+    console.error('❌ ContentGuard analysis failed:', error)
+    
+    // Fallback to basic checks if ContentGuard fails
+    console.log('↪️ Falling back to basic spam detection...')
+    
+    const allText = `${name} ${subject} ${message}`.toLowerCase()
+    let fallbackScore = 0
+    const fallbackFlags = []
+    
+    // Basic spam patterns
+    const spamPatterns = ['kill yourself', 'kys', 'die', 'fortnite', 'gaming', 'vro', 'bruh']
+    spamPatterns.forEach(pattern => {
+      if (allText.includes(pattern)) {
+        fallbackScore += 3
+        fallbackFlags.push(`Basic spam pattern: "${pattern}"`)
+      }
+    })
+    
+    return {
+      isSpam: fallbackScore >= 5,
+      score: fallbackScore,
+      confidence: 0.5, // Lower confidence for fallback
+      riskLevel: fallbackScore >= 7 ? 'HIGH' : fallbackScore >= 4 ? 'MEDIUM' : 'LOW',
+      flags: fallbackFlags,
+      recommendation: fallbackScore >= 5 ? 'Block - Spam detected' : 'Allow - Clean content',
+      variant: 'fallback-basic',
+      processingTime: 0,
+      error: error.message
+    }
+  }
+}
+
+// LEGACY INSTANT SPAM DETECTION (keep for obviously bad stuff)
 function isInstantSpam({ name, email, subject, message }) {
   const allText = `${name} ${subject} ${message}`.toLowerCase()
   
@@ -112,7 +359,6 @@ function isInstantSpam({ name, email, subject, message }) {
     'enlarge your p3nis', 'xxx video', 'hot singles', 'male enhancement',
     'russian brides', 'nigerian prince', 'cheap viagra', 'buy followers',
     'adult content', 'earn $1000 a day', 'work from home scheme'
-    // Add more absolutely undeniable spam phrases here
   ]
 
   for (const keyword of instantSpamKeywords) {
@@ -128,41 +374,35 @@ function isInstantSpam({ name, email, subject, message }) {
     return { isSpam: true, reason: `Email from banned TLD: ${emailDomain}` }
   }
 
-  // Add more instant rejection rules if needed (e.g., specific Unicode ranges, known bad IPs via a list)
-
   return { isSpam: false }
 }
 
-// EMAIL SENDING FUNCTION (now with ULTIMATE ANTI-TROLL SYSTEM)
-async function sendEmail({ name, email, subject, message }) {
+// ENHANCED EMAIL SENDING WITH HEURISTICS AND CONTENTGUARD RESULTS
+async function sendEmail({ name, email, subject, message, userHeuristics, contentGuardResult }) {
   
-  // OPTION 1: Discord Webhook with Ultimate Anti-Troll Analysis
-  const mainWebhookUrl = process.env.DISCORD_MAIN_WEBHOOK || null // Set this for main channel
-  const spamWebhookUrl = process.env.DISCORD_SPAM_WEBHOOK || 'https://discord.com/api/webhooks/1378615327851675769/VOATvHtlI7Aw-3RV6cl7hY9MUIo2bRWuud8zmD4g_fBxMx6cKnmYwtj-NjgbCfSOzYoz' // Default to spam if no main
+  // Discord Webhook with Enhanced Reporting
+  const mainWebhookUrl = process.env.DISCORD_MAIN_WEBHOOK || null
+  const spamWebhookUrl = process.env.DISCORD_SPAM_WEBHOOK || 'https://discord.com/api/webhooks/1378615327851675769/VOATvHtlI7Aw-3RV6cl7hY9MUIo2bRWuud8zmD4g_fBxMx6cKnmYwtj-NjgbCfSOzYoz'
   
-  if (mainWebhookUrl || spamWebhookUrl) { // Proceed if at least one webhook is configured
-    console.log('🚀 Attempting Discord webhook with ULTIMATE ANTI-TROLL SYSTEM...')
+  if (mainWebhookUrl || spamWebhookUrl) {
+    console.log('🚀 Attempting Discord webhook with enhanced reporting...')
     
-    // STAGE 2: Ultimate Anti-Troll Analysis (3-Layer Defense)
-    const antiTrollAnalysis = await analyzeUltimateAntiTroll({ name, email, subject, message })
-    console.log('🛡️ Ultimate Anti-Troll Analysis Result:', antiTrollAnalysis)
-    
-    // Determine target webhook and channel type
+    // Determine target webhook based on ContentGuard analysis
     let targetWebhookUrl = spamWebhookUrl // Default to spam channel
     let channelType = 'SPAM'
 
-    // Route to main channel only if we have it AND message is clean
-    if (mainWebhookUrl && !antiTrollAnalysis.isSpam) {
+    // Route to main channel only if we have it AND ContentGuard says it's clean
+    if (mainWebhookUrl && !contentGuardResult.isSpam) {
       targetWebhookUrl = mainWebhookUrl
       channelType = 'MAIN'
     }
 
     if (targetWebhookUrl) {
-        console.log(`📤 Routing to ${channelType} channel (Anti-Troll Analysis: ${antiTrollAnalysis.riskLevel})`)
+        console.log(`📤 Routing to ${channelType} channel (ContentGuard: ${contentGuardResult.riskLevel})`)
         
         const discordSent = await sendViaDiscord({ 
           name, email, subject, message, 
-          spamAnalysis: antiTrollAnalysis, channelType 
+          userHeuristics, contentGuardResult, channelType 
         }, targetWebhookUrl)
         
         if (discordSent) {
@@ -176,10 +416,9 @@ async function sendEmail({ name, email, subject, message }) {
     }
   }
   
-  // Fallback to email services ONLY if Discord fails or isn't configured
+  // Fallback to email services (keeping the existing fallback chain)
   console.log('↪️ Discord notification failed or not configured. Attempting email fallbacks...')
 
-  // OPTION 2: SendGrid (if available)
   if (process.env.SENDGRID_API_KEY) {
     console.log('Attempting SendGrid...')
     const sgSent = await sendViaSendGrid({ name, email, subject, message })
@@ -198,393 +437,51 @@ async function sendEmail({ name, email, subject, message }) {
     if (gmSent) return true
   }
   
-  // If all notification methods fail, log everything for manual follow-up
-  console.log('⚠️ All notification methods (Discord & Email) failed. Contact details logged for manual outreach.')
-  console.log('📋 Complete contact form submission for manual follow-up:')
+  // If all methods fail, log everything for manual follow-up
+  console.log('⚠️ All notification methods failed. Complete data logged for manual outreach.')
+  console.log('📋 Complete contact form submission:')
   console.log(`Name: ${name}`)
   console.log(`Email: ${email}`)
   console.log(`Subject: ${subject}`)
   console.log(`Message: ${message}`)
+  console.log(`ContentGuard Analysis:`, JSON.stringify(contentGuardResult, null, 2))
+  console.log(`User Heuristics:`, JSON.stringify(userHeuristics, null, 2))
   console.log(`Timestamp: ${new Date().toISOString()}`)
-  console.log('👆 Manual follow-up required.')
   
-  return false // Indicates all notification attempts failed
+  return false
 }
 
-// ULTIMATE ANTI-TROLL ANALYSIS - 3-Layer Defense System
-async function analyzeUltimateAntiTroll({ name, email, subject, message }) {
-  console.log('🛡️ === STARTING ULTIMATE ANTI-TROLL ANALYSIS ===')
-  console.log('Input data:', { name, email, subject, messageLength: message.length })
-  
+// ENHANCED DISCORD WEBHOOK WITH COMPREHENSIVE REPORTING
+async function sendViaDiscord({ name, email, subject, message, userHeuristics, contentGuardResult, channelType }, discordWebhookUrl) {
   try {
-    const allText = `${name} ${subject} ${message}`
-    const emailDomain = email.split('@')[1]?.toLowerCase() || ''
+    console.log('📤 Preparing enhanced Discord embed message...')
     
-    // ==========================================
-    // LAYER 1: OBSCENITY - Advanced Profanity Detection
-    // ==========================================
-    console.log('🔍 LAYER 1: Running Obscenity profanity analysis...')
-    
-    let layer1Score = 0
-    const layer1Flags = []
-    
-    // Check each field separately for detailed analysis
-    const profanityChecks = [
-      { field: 'name', text: name },
-      { field: 'subject', text: subject }, 
-      { field: 'message', text: message },
-      { field: 'combined', text: allText }
-    ]
-    
-    profanityChecks.forEach(({ field, text }) => {
-      const matches = profanityMatcher.getAllMatches(text)
-      if (matches.length > 0) {
-        const score = matches.length * 4 // 4 points per profane word
-        layer1Score += score
-        matches.forEach(match => {
-          const { phraseMetadata } = englishDataset.getPayloadWithPhraseMetadata(match)
-          layer1Flags.push(`Profanity in ${field}: "${phraseMetadata.originalWord}"`)
-          console.log(`🚨 LAYER 1: Profanity detected in ${field}: "${phraseMetadata.originalWord}" (+4 points)`)
-        })
-      }
-    })
-    
-    console.log(`📊 LAYER 1 (Obscenity) Score: ${layer1Score}`)
-    
-    // ==========================================
-    // LAYER 2: SENTIMENT - Hostility Detection
-    // ==========================================
-    console.log('🔍 LAYER 2: Running Sentiment hostility analysis...')
-    
-    let layer2Score = 0
-    const layer2Flags = []
-    
-    // Analyze sentiment of combined text
-    const sentimentResult = sentiment.analyze(allText)
-    console.log('LAYER 2 Raw sentiment:', sentimentResult)
-    
-    // Hostile/negative sentiment scoring
-    if (sentimentResult.comparative <= -0.5) {
-      layer2Score += 6
-      layer2Flags.push(`Highly negative sentiment (${sentimentResult.comparative.toFixed(3)})`)
-      console.log(`🚨 LAYER 2: Highly negative sentiment: ${sentimentResult.comparative.toFixed(3)} (+6 points)`)
-    } else if (sentimentResult.comparative <= -0.2) {
-      layer2Score += 3
-      layer2Flags.push(`Negative sentiment (${sentimentResult.comparative.toFixed(3)})`)
-      console.log(`🚨 LAYER 2: Negative sentiment: ${sentimentResult.comparative.toFixed(3)} (+3 points)`)
-    }
-    
-    // Specific hostile words detected
-    if (sentimentResult.negative && sentimentResult.negative.length > 0) {
-      const hostileCount = sentimentResult.negative.length
-      if (hostileCount >= 3) {
-        layer2Score += 4
-        layer2Flags.push(`Multiple hostile words (${hostileCount}): ${sentimentResult.negative.slice(0,3).join(', ')}`)
-        console.log(`🚨 LAYER 2: Multiple hostile words: ${sentimentResult.negative.slice(0,3).join(', ')} (+4 points)`)
-      } else if (hostileCount >= 1) {
-        layer2Score += 2
-        layer2Flags.push(`Hostile words (${hostileCount}): ${sentimentResult.negative.join(', ')}`)
-        console.log(`🚨 LAYER 2: Hostile words: ${sentimentResult.negative.join(', ')} (+2 points)`)
-      }
-    }
-    
-    console.log(`📊 LAYER 2 (Sentiment) Score: ${layer2Score}`)
-    
-    // ==========================================
-    // LAYER 3: TEXT-MODERATE - Multi-Language Toxicity
-    // ==========================================
-    console.log('🔍 LAYER 3: Running TextModerate toxicity analysis...')
-    
-    let layer3Score = 0
-    const layer3Flags = []
-    
-    // Check for profanity with TextModerate
-    const isProfane = textModerate.isProfane(allText)
-    if (isProfane) {
-      layer3Score += 5
-      layer3Flags.push('TextModerate detected profanity')
-      console.log(`🚨 LAYER 3: TextModerate profanity detected (+5 points)`)
-    }
-    
-    // Clean text and see what gets filtered
-    const cleanedText = textModerate.clean(allText)
-    const hasFilteredContent = cleanedText !== allText
-    if (hasFilteredContent) {
-      layer3Score += 3
-      layer3Flags.push('Content required filtering')
-      console.log(`🚨 LAYER 3: Content filtering required (+3 points)`)
-    }
-    
-    // Analyze sentiment with TextModerate
-    try {
-      const tmSentiment = textModerate.analyzeSentiment(allText)
-      console.log('LAYER 3 TextModerate sentiment:', tmSentiment)
-      
-      if (tmSentiment.comparative <= -0.4) {
-        layer3Score += 4
-        layer3Flags.push(`TextModerate negative sentiment (${tmSentiment.comparative.toFixed(3)})`)
-        console.log(`🚨 LAYER 3: TextModerate negative sentiment: ${tmSentiment.comparative.toFixed(3)} (+4 points)`)
-      }
-    } catch (e) {
-      console.log('LAYER 3: TextModerate sentiment analysis failed:', e.message)
-    }
-    
-    console.log(`📊 LAYER 3 (TextModerate) Score: ${layer3Score}`)
-    
-    // ==========================================
-    // LAYER 4: CUSTOM TROLL-SPECIFIC PATTERNS
-    // ==========================================
-    console.log('🔍 LAYER 4: Running custom troll pattern analysis...')
-    
-    let layer4Score = 0
-    const layer4Flags = []
-    
-    const allTextLower = allText.toLowerCase()
-    
-    // Gaming/troll culture keywords (aggressive detection)
-    const gamingTrollKeywords = [
-      'fortnite', 'minecraft', 'roblox', 'cod', 'apex', 'valorant', 'cs:go', 'csgo',
-      'hop on', 'lets play', 'gaming', 'gamer', 'noob', 'pwned', 'rekt', 'git gud',
-      'skill issue', 'mad cuz bad', 'cope', 'seethe', 'cringe', 'based', 'ratio',
-      'touch grass', 'go outside', 'basement dweller'
-    ]
-    
-    gamingTrollKeywords.forEach(keyword => {
-      if (allTextLower.includes(keyword)) {
-        layer4Score += 3
-        layer4Flags.push(`Gaming/troll keyword: "${keyword}"`)
-        console.log(`🚨 LAYER 4: Gaming/troll keyword: "${keyword}" (+3 points)`)
-      }
-    })
-    
-    // Harassment/violent keywords
-    const harassmentKeywords = [
-      'kill yourself', 'kys', 'kill ya self', 'off yourself', 'end yourself',
-      'rope yourself', 'jump off', 'die in a fire', 'get cancer', 'hope you die',
-      'nobody likes you', 'everyone hates you', 'worthless', 'pathetic loser'
-    ]
-    
-    harassmentKeywords.forEach(keyword => {
-      if (allTextLower.includes(keyword)) {
-        layer4Score += 8 // Severe penalty for direct harassment
-        layer4Flags.push(`Harassment detected: "${keyword}"`)
-        console.log(`🚨 LAYER 4: HARASSMENT DETECTED: "${keyword}" (+8 points)`)
-      }
-    })
-    
-    // Slang/informal patterns that suggest trolling
-    const slangPatterns = [
-      'vro', 'bruh', 'bruv', 'bro', 'sis', 'bestie', 'fr', 'no cap', 'periodt',
-      'slaps', 'bussin', 'sus', 'amogus', 'among us', 'imposter', 'sussy',
-      'deadass', 'finna', 'gonna', 'wanna', 'lowkey', 'highkey', 'ngl'
-    ]
-    
-    const slangCount = slangPatterns.filter(slang => allTextLower.includes(slang)).length
-    if (slangCount >= 3) {
-      layer4Score += 4
-      layer4Flags.push(`Excessive slang/informal language (${slangCount} terms)`)
-      console.log(`🚨 LAYER 4: Excessive slang: ${slangCount} terms (+4 points)`)
-    } else if (slangCount >= 1) {
-      layer4Score += 2
-      layer4Flags.push(`Informal slang detected (${slangCount} terms)`)
-      console.log(`🚨 LAYER 4: Slang detected: ${slangCount} terms (+2 points)`)
-    }
-    
-    // Fake/troll names and emails
-    const trollNames = [
-      'why would i tell you', 'not telling', 'nope', 'none of your business',
-      'anonymous', 'anon', 'test', 'user', 'admin', 'lol', 'lmao', 'ligma',
-      'joe mama', 'deez nuts', 'candice', 'sawcon', 'sugma'
-    ]
-    
-    if (trollNames.some(trollName => name.toLowerCase().includes(trollName))) {
-      layer4Score += 6
-      layer4Flags.push(`Troll/fake name: "${name}"`)
-      console.log(`🚨 LAYER 4: Troll name detected: "${name}" (+6 points)`)
-    }
-    
-    // Fake email patterns
-    const fakeEmailPatterns = [
-      'no@no.com', 'nope@nope.com', 'fake@fake.com', 'test@test.com',
-      'troll@troll.com', 'spam@spam.com', 'lol@lol.com', 'bruh@bruh.com'
-    ]
-    
-    if (fakeEmailPatterns.includes(email.toLowerCase())) {
-      layer4Score += 6
-      layer4Flags.push(`Obvious fake email: ${email}`)
-      console.log(`🚨 LAYER 4: Fake email pattern: ${email} (+6 points)`)
-    }
-    
-    // Short nonsensical messages
-    if (message.length < 30 && !message.match(/engineering|portfolio|internship|job|college|university/i)) {
-      layer4Score += 3
-      layer4Flags.push(`Very short non-professional message (${message.length} chars)`)
-      console.log(`🚨 LAYER 4: Short message: ${message.length} chars (+3 points)`)
-    }
-    
-    console.log(`📊 LAYER 4 (Custom Troll) Score: ${layer4Score}`)
-    
-    // ==========================================
-    // COMBINE ALL LAYERS & POSITIVE INDICATORS
-    // ==========================================
-    console.log('🔍 Checking positive indicators...')
-    
-    let totalScore = layer1Score + layer2Score + layer3Score + layer4Score
-    const allFlags = [...layer1Flags, ...layer2Flags, ...layer3Flags, ...layer4Flags]
-    
-    // Positive indicators (reduce score)
-    const trustedDomains = ['gmail.com', 'outlook.com', 'yahoo.com', 'hotmail.com', 'icloud.com']
-    const eduGovDomains = ['.edu', '.gov', '.ac.uk', '.edu.au']
-    
-    if (trustedDomains.includes(emailDomain)) {
-      totalScore = Math.max(0, totalScore - 1)
-      allFlags.push('Trusted email provider')
-      console.log(`✅ Trusted domain: ${emailDomain} (-1 point)`)
-    }
-    
-    if (eduGovDomains.some(domain => emailDomain.includes(domain))) {
-      totalScore = Math.max(0, totalScore - 4)
-      allFlags.push('Educational/government domain')
-      console.log(`✅ Educational/gov domain: ${emailDomain} (-4 points)`)
-    }
-    
-    // Professional keywords
-    const professionalKeywords = [
-      'engineering', 'engineer', 'mechanical', 'college', 'university', 'student',
-      'application', 'portfolio', 'project', 'internship', 'academic', 'job',
-      'career', 'position', 'opportunity', 'collaboration', 'research', 'thesis',
-      'degree', 'graduation', 'professor', 'resume', 'cv', 'hire', 'employment'
-    ]
-    
-    const professionalCount = professionalKeywords.filter(keyword => allTextLower.includes(keyword)).length
-    if (professionalCount > 0) {
-      const reduction = Math.min(5, professionalCount * 2)
-      totalScore = Math.max(0, totalScore - reduction)
-      allFlags.push(`Professional keywords (${professionalCount}): -${reduction} points`)
-      console.log(`✅ Professional keywords: ${professionalCount} found (-${reduction} points)`)
-    }
-    
-    // Well-structured content
-    const sentences = message.split(/[.!?]+/).filter(s => s.trim().length > 15)
-    if (sentences.length >= 3 && message.length > 150) {
-      totalScore = Math.max(0, totalScore - 3)
-      allFlags.push('Well-structured message')
-      console.log(`✅ Well-structured content (-3 points)`)
-    }
-    
-    // ==========================================
-    // FINAL CLASSIFICATION 
-    // ==========================================
-    const isSpam = totalScore >= 5 // Aggressive threshold: 5+ points = spam
-    const riskLevel = totalScore >= 15 ? 'CRITICAL' :
-                     totalScore >= 10 ? 'HIGH' :
-                     totalScore >= 7 ? 'MEDIUM' :
-                     totalScore >= 3 ? 'LOW' : 'CLEAN'
-
-    const finalResult = {
-      score: totalScore,
-      isSpam,
-      riskLevel,
-      flags: allFlags,
-      layerAnalysis: {
-        layer1_obscenity: { score: layer1Score, flags: layer1Flags },
-        layer2_sentiment: { score: layer2Score, flags: layer2Flags },
-        layer3_textmoderate: { score: layer3Score, flags: layer3Flags },
-        layer4_custom: { score: layer4Score, flags: layer4Flags }
-      },
-      recommendation: isSpam ? 'Route to spam channel' : 'Route to main channel',
-      confidence: totalScore >= 10 ? 'High confidence troll/spam detection' :
-                 totalScore >= 5 ? 'Moderate confidence spam patterns detected' :
-                 'Appears legitimate'
-    }
-    
-    console.log(`🏁 ULTIMATE ANTI-TROLL RESULT:`)
-    console.log(`   Total Score: ${totalScore}/20+`)
-    console.log(`   Classification: ${riskLevel} (${isSpam ? 'SPAM' : 'CLEAN'})`)
-    console.log(`   Layer Breakdown: L1=${layer1Score} L2=${layer2Score} L3=${layer3Score} L4=${layer4Score}`)
-    console.log('🛡️ === ANTI-TROLL ANALYSIS COMPLETE ===')
-    
-    return finalResult
-    
-  } catch (error) {
-    console.error('❌ Ultimate anti-troll analysis failed:', error)
-    console.error('Full error stack:', error.stack)
-    
-    // Ultra-aggressive fallback analysis
-    console.log('↪️ Falling back to ultra-aggressive analysis...')
-    
-    let fallbackScore = 0
-    const fallbackFlags = []
-    
-    const allText = `${name} ${subject} ${message}`.toLowerCase()
-    
-    // Check for obvious troll patterns
-    const trollPatterns = [
-      'kill', 'die', 'fortnite', 'gaming', 'vro', 'bro', 'bruh', 'yo', 'sup',
-      'cringe', 'cope', 'seethe', 'ratio', 'based', 'sus', 'amogus'
-    ]
-    
-    trollPatterns.forEach(pattern => {
-      if (allText.includes(pattern)) {
-        fallbackScore += 5
-        fallbackFlags.push(`Fallback troll pattern: "${pattern}"`)
-        console.log(`🚨 Fallback found: "${pattern}" (+5 points)`)
-      }
-    })
-    
-    // Check for fake identity
-    if (name.toLowerCase().includes('why would') || email.includes('no@no')) {
-      fallbackScore += 8
-      fallbackFlags.push('Obviously fake identity')
-      console.log(`🚨 Fake identity detected (+8 points)`)
-    }
-    
-    const isSpam = fallbackScore >= 5
-    
-    return {
-      score: fallbackScore,
-      isSpam,
-      riskLevel: fallbackScore >= 15 ? 'CRITICAL' : fallbackScore >= 10 ? 'HIGH' : fallbackScore >= 7 ? 'MEDIUM' : 'LOW',
-      flags: fallbackFlags,
-      layerAnalysis: null,
-      recommendation: isSpam ? 'Route to spam channel' : 'Route to main channel',
-      confidence: 'Fallback analysis (libraries failed)',
-      error: error.message
-    }
-  }
-}
-
-// Discord Webhook implementation (SECURE - URL hidden on backend)
-async function sendViaDiscord({ name, email, subject, message, spamAnalysis, channelType }, discordWebhookUrl) {
-  try {
-    console.log('📤 Preparing Discord embed message...')
-    
-    // Color based on spam risk level (more dramatic colors)
-    const embedColor = spamAnalysis.riskLevel === 'CRITICAL' ? 0xFF0000 :        // Bright Red
-                      spamAnalysis.riskLevel === 'HIGH' ? 0xFF4500 :            // Orange Red  
-                      spamAnalysis.riskLevel === 'MEDIUM' ? 0xFFD700 :          // Gold
-                      spamAnalysis.riskLevel === 'LOW' ? 0x32CD32 :             // Lime Green
-                      0x00AA44                                                  // Green
+    // Color based on ContentGuard risk level
+    const embedColor = contentGuardResult.riskLevel === 'CRITICAL' ? 0xFF0000 :    // Bright Red
+                      contentGuardResult.riskLevel === 'HIGH' ? 0xFF4500 :        // Orange Red  
+                      contentGuardResult.riskLevel === 'MEDIUM' ? 0xFFD700 :      // Gold
+                      contentGuardResult.riskLevel === 'LOW' ? 0x32CD32 :         // Lime Green
+                      0x00AA44                                                    // Green
     
     const embed = {
       title: channelType === 'SPAM' ? 
-        `🛡️ ${spamAnalysis.riskLevel} RISK DETECTED` : 
+        `🛡️ ${contentGuardResult.riskLevel} RISK DETECTED` : 
         "🔧 New Portfolio Contact!",
       color: embedColor,
       fields: [
         {
-          name: "👤 Name",
-          value: name,
+          name: "👤 Contact Info",
+          value: `**Name:** ${name}\n**Email:** ${email}`,
           inline: true
         },
         {
-          name: "📧 Email", 
-          value: email,
+          name: "🛡️ ContentGuard Analysis", 
+          value: `**Status:** ${contentGuardResult.isSpam ? 'SPAM' : 'CLEAN'}\n**Score:** ${contentGuardResult.score}/10+\n**Risk:** ${contentGuardResult.riskLevel}\n**Confidence:** ${contentGuardResult.confidence}`,
           inline: true
         },
         {
-          name: "🎯 Risk Level",
-          value: `**${spamAnalysis.riskLevel}** (${spamAnalysis.score}/20+)`,
+          name: "🌐 User Heuristics",
+          value: `**IP:** ${userHeuristics.ip}\n**Browser:** ${userHeuristics.browser}\n**OS:** ${userHeuristics.os}\n**Device:** ${userHeuristics.device}\n**Bot:** ${userHeuristics.isBot ? 'Yes' : 'No'}`,
           inline: true
         },
         {
@@ -598,51 +495,30 @@ async function sendViaDiscord({ name, email, subject, message, spamAnalysis, cha
           inline: false
         },
         {
-          name: "🛡️ Layer 1: Obscenity (Profanity)",
-          value: spamAnalysis.layerAnalysis ? `
-**Score:** ${spamAnalysis.layerAnalysis.layer1_obscenity.score}/20
-**Flags:** ${spamAnalysis.layerAnalysis.layer1_obscenity.flags.length > 0 ? spamAnalysis.layerAnalysis.layer1_obscenity.flags.slice(0,2).join(', ') : 'None'}
-          `.trim() : '❌ Analysis Failed',
-          inline: true
+          name: "🚩 Detection Flags",
+          value: contentGuardResult.flags.length > 0 ? 
+            contentGuardResult.flags.slice(0, 5).join('\n') + 
+            (contentGuardResult.flags.length > 5 ? `\n... (+${contentGuardResult.flags.length - 5} more)` : '') : 
+            'None detected',
+          inline: false
         },
         {
-          name: "💭 Layer 2: Sentiment (Hostility)",
-          value: spamAnalysis.layerAnalysis ? `
-**Score:** ${spamAnalysis.layerAnalysis.layer2_sentiment.score}/20
-**Flags:** ${spamAnalysis.layerAnalysis.layer2_sentiment.flags.length > 0 ? spamAnalysis.layerAnalysis.layer2_sentiment.flags.slice(0,2).join(', ') : 'None'}
-          `.trim() : '❌ Analysis Failed',
-          inline: true
-        },
-        {
-          name: "🧬 Layer 3: TextModerate (Toxicity)",
-          value: spamAnalysis.layerAnalysis ? `
-**Score:** ${spamAnalysis.layerAnalysis.layer3_textmoderate.score}/20
-**Flags:** ${spamAnalysis.layerAnalysis.layer3_textmoderate.flags.length > 0 ? spamAnalysis.layerAnalysis.layer3_textmoderate.flags.slice(0,2).join(', ') : 'None'}
-          `.trim() : '❌ Analysis Failed',
-          inline: true
-        },
-        {
-          name: "🎮 Layer 4: Custom (Troll Patterns)",
-          value: spamAnalysis.layerAnalysis ? `
-**Score:** ${spamAnalysis.layerAnalysis.layer4_custom.score}/20
-**Flags:** ${spamAnalysis.layerAnalysis.layer4_custom.flags.length > 0 ? spamAnalysis.layerAnalysis.layer4_custom.flags.slice(0,2).join(', ') : 'None'}
-          `.trim() : '❌ Analysis Failed',
-          inline: true
-        },
-        {
-          name: "📊 Combined Analysis",
+          name: "🔍 Technical Details",
           value: `
-**Final Confidence:** ${spamAnalysis.confidence}
-**Action:** ${spamAnalysis.recommendation}
-**Total Flags:** ${spamAnalysis.flags.length}
-**Top Issues:** ${spamAnalysis.flags.length > 0 ? spamAnalysis.flags.slice(0, 2).join(', ') + (spamAnalysis.flags.length > 2 ? `... (+${spamAnalysis.flags.length - 2} more)` : '') : 'None detected'}
-**Error:** ${spamAnalysis.error || 'None'}
+**User Agent:** ${userHeuristics.userAgent.substring(0, 100)}${userHeuristics.userAgent.length > 100 ? '...' : ''}
+**Referer:** ${userHeuristics.referer}
+**Language:** ${userHeuristics.acceptLanguage}
+**Location:** ${userHeuristics.country || 'unknown'}
+**Timezone:** ${userHeuristics.timezone}
+**Initial Risk Score:** ${userHeuristics.riskScore}/10
+**ContentGuard Variant:** ${contentGuardResult.variant}
+**Processing Time:** ${contentGuardResult.processingTime}ms
           `.trim(),
           inline: false
         }
       ],
       footer: {
-        text: `Jose Rodriguez Portfolio • ${new Date().toLocaleString()} • ${channelType} Channel • Ultimate Anti-Troll: ${spamAnalysis.score}/20+ (${spamAnalysis.layerAnalysis ? `L1:${spamAnalysis.layerAnalysis.layer1_obscenity.score} L2:${spamAnalysis.layerAnalysis.layer2_sentiment.score} L3:${spamAnalysis.layerAnalysis.layer3_textmoderate.score} L4:${spamAnalysis.layerAnalysis.layer4_custom.score}` : 'Fallback'})`
+        text: `Jose Rodriguez Portfolio • ${new Date().toLocaleString()} • ${channelType} Channel • ContentGuard: ${contentGuardResult.score}/10+ (${contentGuardResult.riskLevel}) • User Risk: ${userHeuristics.riskScore}/10`
       },
       timestamp: new Date().toISOString()
     }
@@ -656,10 +532,10 @@ async function sendViaDiscord({ name, email, subject, message, spamAnalysis, cha
       },
       body: JSON.stringify({
         content: channelType === 'SPAM' ? 
-          `🛡️ **Anti-Troll System Alert** (Score: ${spamAnalysis.score}/20+, Layers: ${spamAnalysis.layerAnalysis ? `${spamAnalysis.layerAnalysis.layer1_obscenity.score}+${spamAnalysis.layerAnalysis.layer2_sentiment.score}+${spamAnalysis.layerAnalysis.layer3_textmoderate.score}+${spamAnalysis.layerAnalysis.layer4_custom.score}` : 'Fallback'})` :
+          `🛡️ **ContentGuard Alert** (Score: ${contentGuardResult.score}/10+, Risk: ${contentGuardResult.riskLevel}, User Risk: ${userHeuristics.riskScore}/10)` :
           "📬 **New contact form submission!**",
         embeds: [embed],
-        username: "Ultimate Anti-Troll Bot"
+        username: "Enhanced Anti-Spam Bot"
       })
     })
 
@@ -682,7 +558,7 @@ async function sendViaDiscord({ name, email, subject, message, spamAnalysis, cha
   }
 }
 
-// SendGrid implementation
+// EXISTING EMAIL FALLBACK FUNCTIONS (unchanged)
 async function sendViaSendGrid({ name, email, subject, message }) {
   try {
     const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
@@ -726,7 +602,6 @@ async function sendViaSendGrid({ name, email, subject, message }) {
   }
 }
 
-// Resend implementation (modern alternative)
 async function sendViaResend({ name, email, subject, message }) {
   try {
     const response = await fetch('https://api.resend.com/emails', {
@@ -758,4 +633,10 @@ async function sendViaResend({ name, email, subject, message }) {
     console.error('Resend error:', error)
     return false
   }
+} 
+
+async function sendViaGmail({ name, email, subject, message }) {
+  // This would require nodemailer setup - placeholder for now
+  console.log('Gmail SMTP not implemented yet')
+  return false
 } 

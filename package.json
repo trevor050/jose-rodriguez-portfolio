@@ -24,6 +24,7 @@
   "dependencies": {
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
+    "content-guard": "^4.5.0",
     "obscenity": "^0.4.3",
     "react-icons": "^5.5.0",
     "sentiment": "^5.0.2",
