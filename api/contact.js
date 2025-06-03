@@ -4,6 +4,7 @@ import pkg from 'content-guard'
 const { createGuard } = pkg
 import { UAParser } from 'ua-parser-js'
 import geoip from 'geoip-lite'
+import crypto from 'crypto'
 
 // Initialize ContentGuard with balanced variant for good accuracy and reasonable speed
 const contentGuard = createGuard('balanced', {
@@ -369,12 +370,10 @@ function calculateEnhancedRiskScore(userAgent, ip, referer, headers, userAgentDa
 
 // SESSION AND FINGERPRINTING
 function generateSessionId(ip, userAgent) {
-  const crypto = require('crypto')
   return crypto.createHash('md5').update(`${ip}-${userAgent}-${Date.now()}`).digest('hex').substring(0, 16)
 }
 
 function generateFingerprint(ip, userAgent, acceptLanguage, acceptEncoding) {
-  const crypto = require('crypto')
   return crypto.createHash('sha256').update(`${ip}-${userAgent}-${acceptLanguage}-${acceptEncoding}`).digest('hex').substring(0, 32)
 }
 
