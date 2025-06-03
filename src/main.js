@@ -36,6 +36,18 @@ ADDING NEW FILTERS:
 CURRENT CATEGORIES BEING USED:
 (These will automatically become filter buttons)
 */
+// Usage analytics helper
+const sendUsage = (event, details = {}) => {
+  fetch("/api/usage", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ event, details })
+  }).catch(err => console.error("Usage send error", err));
+};
+
+let viewStartTime = Date.now();
+let projectViewStart = null;
+
 
 // Import all the data from the separate, easy-to-edit files
 import { projectsData, portfolioStats } from './data/projects.js'
@@ -56,6 +68,7 @@ let currentView = 'projects'
 let isDarkMode = true
 let currentFilters = ['All'] // Changed to array for multi-select
 
+let currentProjectId = null;
 // CONSERVATIVE anti-spam state management - prioritizes NEVER blocking real opportunities
 let submissionAttempts = 0
 let lastSubmissionTime = 0
@@ -454,6 +467,9 @@ const renderHeader = () => {
 const handleNavigation = (view) => {
   if (view === currentView) return
   
+  const duration = Date.now() - viewStartTime
+  sendUsage('View Duration', { view: currentView, ms: duration })
+
   // Track navigation analytics
   track('Page Navigation', {
     from: currentView,
@@ -461,6 +477,7 @@ const handleNavigation = (view) => {
     timestamp: new Date().toISOString(),
     device: isMobile() ? 'mobile' : 'desktop'
   })
+  sendUsage('Page Navigation', { from: currentView, to: view, ms: duration })
   
   // Don't show loading on mobile to prevent content appearing below fold
   if (!isMobile()) {
@@ -471,6 +488,7 @@ const handleNavigation = (view) => {
   
   setTimeout(() => {
     currentView = view
+    viewStartTime = Date.now()
     renderApp()
     
     if (!isMobile()) {
@@ -506,7 +524,11 @@ const handleProjectClick = (projectId) => {
       timestamp: new Date().toISOString(),
       device: isMobile() ? 'mobile' : 'desktop'
     })
-    
+
+    projectViewStart = Date.now()
+    currentProjectId = project.id
+    sendUsage('Project Open', { id: project.id, title: project.title })
+
     showProjectModal(project)
   }
 }
@@ -531,6 +553,12 @@ const closeProjectModal = () => {
   if (modal) {
     modal.remove()
     document.body.style.overflow = 'auto'
+    if (currentProjectId !== null && projectViewStart) {
+      const duration = Date.now() - projectViewStart
+      sendUsage('Project Close', { id: currentProjectId, ms: duration })
+    }
+    projectViewStart = null
+    currentProjectId = null
   }
 }
 
@@ -592,6 +620,8 @@ const submitContactForm = async (data) => {
     
   } catch (error) {
     console.error('Contact form error:', error)
+
+    sendUsage('Contact Failed', { error: error.message })
     
     // Fallback: Log the submission data for manual follow-up
     console.log('📧 Contact Form Submission (for manual follow-up):', {
@@ -670,6 +700,11 @@ const handleContactForm = async (e) => {
         subjectLength: data.subject.length,
         messageLength: data.message.length,
         device: isMobile() ? 'mobile' : 'desktop'
+      })
+      sendUsage('Contact Submitted', {
+        nameLength: data.name.length,
+        subjectLength: data.subject.length,
+        messageLength: data.message.length
       })
       
       // Show success state
@@ -936,6 +971,10 @@ const init = () => {
     ...performanceData,
     ...ANALYTICS_CONFIG.customDimensions
   })
+  sendUsage('Portfolio Loaded', {
+    viewport: `${window.innerWidth}x${window.innerHeight}`,
+    theme: isDarkMode ? 'dark' : 'light'
+  })
   
   // Initialize advanced tracking features
   if (ANALYTICS_CONFIG.trackScrollDepth) {
@@ -960,6 +999,10 @@ const init = () => {
   window.addEventListener('scroll', handleScroll)
   document.addEventListener('keydown', handleKeyboardNavigation)
   
+  window.addEventListener("beforeunload", () => {
+    const duration = Date.now() - viewStartTime;
+    sendUsage("Session End", { view: currentView, ms: duration });
+  });
   // Initial render
   renderApp()
   
