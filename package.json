@@ -25,10 +25,12 @@
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
     "content-guard": "^4.5.0",
+    "geoip-lite": "^1.4.10",
     "obscenity": "^0.4.3",
     "react-icons": "^5.5.0",
     "sentiment": "^5.0.2",
     "spamscanner": "^5.1.5",
-    "text-moderate": "^1.0.7"
+    "text-moderate": "^1.0.7",
+    "ua-parser-js": "^2.0.3"
   }
 }

@@ -1,7 +1,9 @@
 // Vercel Serverless Function for Contact Form
-// ENHANCED USER TRACKING + CONTENTGUARD INTEGRATION
+// ENHANCED USER TRACKING + CONTENTGUARD INTEGRATION + IMPROVED ANALYTICS
 import pkg from 'content-guard'
 const { createGuard } = pkg
+import { UAParser } from 'ua-parser-js'
+import geoip from 'geoip-lite'
 
 // Initialize ContentGuard with balanced variant for good accuracy and reasonable speed
 const contentGuard = createGuard('balanced', {
@@ -12,7 +14,25 @@ console.log('🛡️ ContentGuard Spam Detection System Initialized')
 console.log('  ↳ Variant: Balanced (~0.3ms, 93%+ accuracy)')
 console.log('  ↳ Spam Threshold: 5')
 
+// Analytics tracking for usage insights
+const analyticsData = {
+  totalRequests: 0,
+  spamBlocked: 0,
+  legitimateMessages: 0,
+  topCountries: new Map(),
+  topBrowsers: new Map(),
+  topDevices: new Map(),
+  hourlyStats: new Map()
+}
+
 export default async function handler(req, res) {
+  // Increment total requests counter
+  analyticsData.totalRequests++
+  
+  // Track hourly statistics
+  const currentHour = new Date().getHours()
+  analyticsData.hourlyStats.set(currentHour, (analyticsData.hourlyStats.get(currentHour) || 0) + 1)
+
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -29,18 +49,23 @@ export default async function handler(req, res) {
     // STAGE 0: HONEYPOT CHECK - INSTANT BOT REJECTION
     if (website && website.trim() !== '') {
       console.log('🍯 Honeypot triggered - INSTANT BOT REJECTION')
+      analyticsData.spamBlocked++
       // Return a generic success to not alert bots, but don't process further.
       return res.status(200).json({ success: true, message: 'Message received.' })
     }
 
-    // STAGE 1: COLLECT COMPREHENSIVE USER HEURISTICS
+    // STAGE 1: COLLECT COMPREHENSIVE USER HEURISTICS WITH IMPROVED ANALYTICS
     const userHeuristics = await collectUserHeuristics(req)
     console.log('📊 User heuristics collected:', JSON.stringify(userHeuristics, null, 2))
+
+    // Update analytics with user data
+    updateAnalytics(userHeuristics)
 
     // STAGE 2: INSTANT SPAM DETECTION FOR 1000% OBVIOUS SPAM
     const instantSpamVerdict = isInstantSpam({ name, email, subject, message })
     if (instantSpamVerdict.isSpam) {
       console.log('🗑️ INSTANT SPAM REJECTION:', instantSpamVerdict.reason)
+      analyticsData.spamBlocked++
       return res.status(400).json({
         error: 'Message identified as high-confidence spam. If this is a legitimate inquiry, please contact Jose directly via LinkedIn.',
         reason: instantSpamVerdict.reason
@@ -72,18 +97,27 @@ export default async function handler(req, res) {
     const contentGuardResult = await analyzeWithContentGuard({ name, email, subject, message })
     console.log('🛡️ ContentGuard Result:', contentGuardResult)
 
-    // STAGE 5: SEND EMAIL WITH ENHANCED REPORTING
+    // Update spam analytics based on ContentGuard result
+    if (contentGuardResult.isSpam) {
+      analyticsData.spamBlocked++
+    } else {
+      analyticsData.legitimateMessages++
+    }
+
+    // STAGE 5: SEND EMAIL WITH ENHANCED REPORTING INCLUDING ANALYTICS
     const emailSent = await sendEmail({ 
       name: name.trim(),
       email: email.trim().toLowerCase(),
       subject: subject.trim(),
       message: message.trim(),
       userHeuristics,
-      contentGuardResult
+      contentGuardResult,
+      analytics: getAnalyticsSummary()
     })
 
     if (emailSent) {
       console.log('✅ Enhanced notification process completed.')
+      console.log('📈 Current Analytics Summary:', getAnalyticsSummary())
       return res.status(200).json({
         success: true,
         message: 'Message sent successfully! I\'ll get back to you soon.'
@@ -103,10 +137,10 @@ export default async function handler(req, res) {
   }
 }
 
-// ENHANCED USER HEURISTICS COLLECTION
+// ENHANCED USER HEURISTICS COLLECTION WITH IMPROVED ANALYTICS
 async function collectUserHeuristics(req) {
   const headers = req.headers
-  const ip = headers['x-forwarded-for'] || 
+  const ip = headers['x-forwarded-for']?.split(',')[0]?.trim() || 
              headers['x-real-ip'] || 
              req.connection?.remoteAddress || 
              req.socket?.remoteAddress || 
@@ -120,15 +154,16 @@ async function collectUserHeuristics(req) {
   const connection = headers['connection'] || 'unknown'
   const cacheControl = headers['cache-control'] || 'unknown'
   
-  // Parse User Agent for more details
-  const userAgentData = parseUserAgent(userAgent)
+  // Enhanced User Agent parsing with UAParser
+  const userAgentData = parseUserAgentEnhanced(userAgent)
   
-  // Attempt to get geolocation from IP (you can integrate with services like ipapi.co)
-  const geoData = await getGeoLocation(ip)
+  // Enhanced geolocation with geoip-lite
+  const geoData = await getGeoLocationEnhanced(ip)
   
-  // Calculate request timing
+  // Calculate request timing and session data
   const timestamp = new Date().toISOString()
-  const timezone = headers['timezone'] || 'unknown' // If frontend sends this
+  const timezone = headers['timezone'] || 'unknown'
+  const sessionId = generateSessionId(ip, userAgent)
   
   // Security-related headers
   const securityHeaders = {
@@ -141,12 +176,15 @@ async function collectUserHeuristics(req) {
     secChUaMobile: headers['sec-ch-ua-mobile']
   }
 
+  // Enhanced fingerprinting
+  const fingerprint = generateFingerprint(ip, userAgent, acceptLanguage, acceptEncoding)
+
   return {
     // Network Information
     ip: ip,
     ipType: ip.includes(':') ? 'IPv6' : 'IPv4',
     
-    // User Agent Analysis
+    // Enhanced User Agent Analysis
     userAgent: userAgent,
     ...userAgentData,
     
@@ -158,130 +196,232 @@ async function collectUserHeuristics(req) {
     cacheControl: cacheControl,
     dnt: dnt,
     
-    // Geolocation
+    // Enhanced Geolocation
     ...geoData,
     
-    // Timing
+    // Timing and Session
     timestamp: timestamp,
     timezone: timezone,
+    sessionId: sessionId,
+    fingerprint: fingerprint,
     
     // Security Headers (helpful for bot detection)
     ...securityHeaders,
     
-    // Additional Analysis
-    isLikelyBot: detectBotBehavior(userAgent, headers),
-    riskScore: calculateInitialRiskScore(userAgent, ip, referer, headers)
+    // Enhanced Analysis
+    isLikelyBot: detectBotBehaviorEnhanced(userAgent, headers, userAgentData),
+    riskScore: calculateEnhancedRiskScore(userAgent, ip, referer, headers, userAgentData, geoData),
+    
+    // Performance metrics
+    requestSize: JSON.stringify(req.body).length,
+    headerCount: Object.keys(headers).length
   }
 }
 
-// USER AGENT PARSING
-function parseUserAgent(userAgent) {
+// ENHANCED USER AGENT PARSING WITH UAPARSER
+function parseUserAgentEnhanced(userAgent) {
   if (!userAgent || userAgent === 'unknown') {
     return { 
       browser: 'unknown', 
+      browserVersion: 'unknown',
       os: 'unknown', 
+      osVersion: 'unknown',
       device: 'unknown',
+      deviceType: 'unknown',
+      deviceVendor: 'unknown',
+      cpu: 'unknown',
       isBot: true // Unknown UA is suspicious
     }
   }
 
-  const ua = userAgent.toLowerCase()
-  
-  // Browser detection
-  let browser = 'unknown'
-  if (ua.includes('chrome') && !ua.includes('edg')) browser = 'chrome'
-  else if (ua.includes('firefox')) browser = 'firefox'
-  else if (ua.includes('safari') && !ua.includes('chrome')) browser = 'safari'
-  else if (ua.includes('edg')) browser = 'edge'
-  else if (ua.includes('opera') || ua.includes('opr')) browser = 'opera'
-
-  // OS detection
-  let os = 'unknown'
-  if (ua.includes('windows')) os = 'windows'
-  else if (ua.includes('mac os x') || ua.includes('macos')) os = 'macos'
-  else if (ua.includes('linux')) os = 'linux'
-  else if (ua.includes('android')) os = 'android'
-  else if (ua.includes('iphone') || ua.includes('ipad')) os = 'ios'
-
-  // Device detection
-  let device = 'desktop'
-  if (ua.includes('mobile') || ua.includes('android')) device = 'mobile'
-  else if (ua.includes('tablet') || ua.includes('ipad')) device = 'tablet'
-
-  // Bot detection
-  const botIndicators = ['bot', 'crawler', 'spider', 'scraper', 'curl', 'wget', 'python', 'php']
-  const isBot = botIndicators.some(indicator => ua.includes(indicator))
-
-  return { browser, os, device, isBot }
-}
-
-// GEOLOCATION LOOKUP  
-async function getGeoLocation(ip) {
   try {
-    // Skip for localhost/private IPs
-    if (ip === 'unknown' || ip.startsWith('127.') || ip.startsWith('192.168.') || ip.startsWith('10.')) {
-      return { country: 'local', region: 'local', city: 'local' }
-    }
-
-    // You can integrate with services like:
-    // - ipapi.co (free tier available)
-    // - ipinfo.io 
-    // - ipgeolocation.io
-    // For now, we'll just log and return basic info
+    const parser = new UAParser(userAgent)
+    const result = parser.getResult()
     
-    console.log(`🌍 Would lookup geolocation for IP: ${ip}`)
-    
-    // Placeholder - you can implement actual API calls here
     return {
-      country: 'unknown',
-      region: 'unknown', 
-      city: 'unknown',
-      timezone: 'unknown'
+      browser: result.browser.name || 'unknown',
+      browserVersion: result.browser.version || 'unknown',
+      os: result.os.name || 'unknown',
+      osVersion: result.os.version || 'unknown',
+      device: result.device.model || 'unknown',
+      deviceType: result.device.type || 'desktop',
+      deviceVendor: result.device.vendor || 'unknown',
+      cpu: result.cpu.architecture || 'unknown',
+      isBot: detectBotFromUA(userAgent)
     }
-    
   } catch (error) {
-    console.error('Geolocation lookup failed:', error)
-    return { country: 'error', region: 'error', city: 'error' }
+    console.error('Error parsing user agent:', error)
+    return parseUserAgent(userAgent) // Fallback to original method
   }
 }
 
-// BOT BEHAVIOR DETECTION
-function detectBotBehavior(userAgent, headers) {
+// ENHANCED GEOLOCATION WITH GEOIP-LITE
+async function getGeoLocationEnhanced(ip) {
+  try {
+    // Skip for localhost/private IPs
+    if (ip === 'unknown' || ip.startsWith('127.') || ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) {
+      return { 
+        country: 'local', 
+        region: 'local', 
+        city: 'local', 
+        timezone: 'local',
+        coordinates: { lat: 0, lon: 0 },
+        isp: 'local'
+      }
+    }
+
+    const geo = geoip.lookup(ip)
+    
+    if (geo) {
+      console.log(`🌍 Geolocation found for IP ${ip}:`, geo)
+      return {
+        country: geo.country || 'unknown',
+        region: geo.region || 'unknown',
+        city: geo.city || 'unknown',
+        timezone: geo.timezone || 'unknown',
+        coordinates: {
+          lat: geo.ll?.[0] || 0,
+          lon: geo.ll?.[1] || 0
+        },
+        isp: 'unknown' // geoip-lite doesn't provide ISP info
+      }
+    } else {
+      console.log(`🌍 No geolocation data found for IP: ${ip}`)
+      return {
+        country: 'unknown',
+        region: 'unknown',
+        city: 'unknown',
+        timezone: 'unknown',
+        coordinates: { lat: 0, lon: 0 },
+        isp: 'unknown'
+      }
+    }
+    
+  } catch (error) {
+    console.error('Enhanced geolocation lookup failed:', error)
+    return { 
+      country: 'error', 
+      region: 'error', 
+      city: 'error',
+      timezone: 'error',
+      coordinates: { lat: 0, lon: 0 },
+      isp: 'error'
+    }
+  }
+}
+
+// ENHANCED BOT DETECTION
+function detectBotBehaviorEnhanced(userAgent, headers, userAgentData) {
   const ua = (userAgent || '').toLowerCase()
   
   // Known bot patterns
   const botPatterns = [
     'bot', 'crawler', 'spider', 'scraper', 'curl', 'wget', 
-    'python', 'php', 'java', 'go-http-client', 'okhttp'
+    'python', 'php', 'java', 'go-http-client', 'okhttp',
+    'postman', 'insomnia', 'httpie'
   ]
   
-  const hasbotPattern = botPatterns.some(pattern => ua.includes(pattern))
+  const hasBotPattern = botPatterns.some(pattern => ua.includes(pattern))
   
   // Suspicious header patterns
   const hasMinimalHeaders = Object.keys(headers).length < 5
   const missingCommonHeaders = !headers['accept'] || !headers['accept-language']
   
-  return hasbotPattern || hasMinimalHeaders || missingCommonHeaders
+  // Check if UAParser detected it as a bot
+  const uaParserBot = userAgentData.isBot
+  
+  // Check for headless browser indicators
+  const headlessIndicators = ['headless', 'phantom', 'selenium', 'webdriver']
+  const hasHeadlessIndicators = headlessIndicators.some(indicator => ua.includes(indicator))
+  
+  return hasBotPattern || hasMinimalHeaders || missingCommonHeaders || uaParserBot || hasHeadlessIndicators
 }
 
-// INITIAL RISK SCORING
-function calculateInitialRiskScore(userAgent, ip, referer, headers) {
+// ENHANCED RISK SCORING
+function calculateEnhancedRiskScore(userAgent, ip, referer, headers, userAgentData, geoData) {
   let score = 0
   
   // User Agent risks
   if (!userAgent || userAgent === 'unknown') score += 3
-  if (detectBotBehavior(userAgent, headers)) score += 2
+  if (userAgentData.isBot) score += 2
+  if (userAgentData.browser === 'unknown') score += 2
   
   // IP risks  
   if (ip === 'unknown') score += 2
+  if (ip.startsWith('10.') || ip.startsWith('192.168.')) score += 1 // Private IP
+  
+  // Geolocation risks
+  if (geoData.country === 'unknown' || geoData.country === 'error') score += 1
   
   // Referer risks
-  if (referer === 'direct') score += 1 // Not necessarily bad, but worth noting
+  if (referer === 'direct') score += 0.5 // Not necessarily bad, but worth noting
   
   // Header analysis
   if (Object.keys(headers).length < 5) score += 2
+  if (!headers['accept-language']) score += 1
+  if (!headers['accept']) score += 1
+  
+  // Device type risks
+  if (userAgentData.deviceType === 'unknown') score += 1
   
   return Math.min(score, 10) // Cap at 10
+}
+
+// SESSION AND FINGERPRINTING
+function generateSessionId(ip, userAgent) {
+  const crypto = require('crypto')
+  return crypto.createHash('md5').update(`${ip}-${userAgent}-${Date.now()}`).digest('hex').substring(0, 16)
+}
+
+function generateFingerprint(ip, userAgent, acceptLanguage, acceptEncoding) {
+  const crypto = require('crypto')
+  return crypto.createHash('sha256').update(`${ip}-${userAgent}-${acceptLanguage}-${acceptEncoding}`).digest('hex').substring(0, 32)
+}
+
+function detectBotFromUA(userAgent) {
+  const ua = userAgent.toLowerCase()
+  const botIndicators = ['bot', 'crawler', 'spider', 'scraper', 'curl', 'wget', 'python', 'php']
+  return botIndicators.some(indicator => ua.includes(indicator))
+}
+
+// ANALYTICS FUNCTIONS
+function updateAnalytics(userHeuristics) {
+  // Update country statistics
+  if (userHeuristics.country && userHeuristics.country !== 'unknown') {
+    analyticsData.topCountries.set(
+      userHeuristics.country, 
+      (analyticsData.topCountries.get(userHeuristics.country) || 0) + 1
+    )
+  }
+  
+  // Update browser statistics
+  if (userHeuristics.browser && userHeuristics.browser !== 'unknown') {
+    analyticsData.topBrowsers.set(
+      userHeuristics.browser, 
+      (analyticsData.topBrowsers.get(userHeuristics.browser) || 0) + 1
+    )
+  }
+  
+  // Update device statistics
+  if (userHeuristics.deviceType && userHeuristics.deviceType !== 'unknown') {
+    analyticsData.topDevices.set(
+      userHeuristics.deviceType, 
+      (analyticsData.topDevices.get(userHeuristics.deviceType) || 0) + 1
+    )
+  }
+}
+
+function getAnalyticsSummary() {
+  return {
+    totalRequests: analyticsData.totalRequests,
+    spamBlocked: analyticsData.spamBlocked,
+    legitimateMessages: analyticsData.legitimateMessages,
+    spamRate: analyticsData.totalRequests > 0 ? (analyticsData.spamBlocked / analyticsData.totalRequests * 100).toFixed(2) + '%' : '0%',
+    topCountries: Array.from(analyticsData.topCountries.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5),
+    topBrowsers: Array.from(analyticsData.topBrowsers.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5),
+    topDevices: Array.from(analyticsData.topDevices.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3),
+    hourlyStats: Array.from(analyticsData.hourlyStats.entries()).sort((a, b) => a[0] - b[0])
+  }
 }
 
 // CONTENTGUARD INTEGRATION
@@ -378,7 +518,7 @@ function isInstantSpam({ name, email, subject, message }) {
 }
 
 // ENHANCED EMAIL SENDING WITH HEURISTICS AND CONTENTGUARD RESULTS
-async function sendEmail({ name, email, subject, message, userHeuristics, contentGuardResult }) {
+async function sendEmail({ name, email, subject, message, userHeuristics, contentGuardResult, analytics }) {
   
   // Discord Webhook with Enhanced Reporting
   const mainWebhookUrl = process.env.DISCORD_MAIN_WEBHOOK || null
@@ -402,7 +542,7 @@ async function sendEmail({ name, email, subject, message, userHeuristics, conten
         
         const discordSent = await sendViaDiscord({ 
           name, email, subject, message, 
-          userHeuristics, contentGuardResult, channelType 
+          userHeuristics, contentGuardResult, channelType, analytics 
         }, targetWebhookUrl)
         
         if (discordSent) {
@@ -452,7 +592,7 @@ async function sendEmail({ name, email, subject, message, userHeuristics, conten
 }
 
 // ENHANCED DISCORD WEBHOOK WITH COMPREHENSIVE REPORTING
-async function sendViaDiscord({ name, email, subject, message, userHeuristics, contentGuardResult, channelType }, discordWebhookUrl) {
+async function sendViaDiscord({ name, email, subject, message, userHeuristics, contentGuardResult, channelType, analytics }, discordWebhookUrl) {
   try {
     console.log('📤 Preparing enhanced Discord embed message...')
     
@@ -510,15 +650,30 @@ async function sendViaDiscord({ name, email, subject, message, userHeuristics, c
 **Language:** ${userHeuristics.acceptLanguage}
 **Location:** ${userHeuristics.country || 'unknown'}
 **Timezone:** ${userHeuristics.timezone}
+**Session ID:** ${userHeuristics.sessionId}
+**Fingerprint:** ${userHeuristics.fingerprint.substring(0, 16)}...
 **Initial Risk Score:** ${userHeuristics.riskScore}/10
 **ContentGuard Variant:** ${contentGuardResult.variant}
 **Processing Time:** ${contentGuardResult.processingTime}ms
           `.trim(),
           inline: false
+        },
+        {
+          name: "📈 Current Analytics Summary",
+          value: `
+**Total Requests:** ${analytics.totalRequests}
+**Spam Blocked:** ${analytics.spamBlocked}
+**Legitimate Messages:** ${analytics.legitimateMessages}
+**Spam Rate:** ${analytics.spamRate}
+**Top Countries:** ${analytics.topCountries.map(([country, count]) => `${country}: ${count}`).join(', ') || 'None'}
+**Top Browsers:** ${analytics.topBrowsers.map(([browser, count]) => `${browser}: ${count}`).join(', ') || 'None'}
+**Top Devices:** ${analytics.topDevices.map(([device, count]) => `${device}: ${count}`).join(', ') || 'None'}
+          `.trim(),
+          inline: false
         }
       ],
       footer: {
-        text: `Jose Rodriguez Portfolio • ${new Date().toLocaleString()} • ${channelType} Channel • ContentGuard: ${contentGuardResult.score}/10+ (${contentGuardResult.riskLevel}) • User Risk: ${userHeuristics.riskScore}/10`
+        text: `Jose Rodriguez Portfolio • ${new Date().toLocaleString()} • ${channelType} Channel • ContentGuard: ${contentGuardResult.score}/10+ (${contentGuardResult.riskLevel}) • User Risk: ${userHeuristics.riskScore}/10 • Session: ${analytics.totalRequests}`
       },
       timestamp: new Date().toISOString()
     }
@@ -532,8 +687,8 @@ async function sendViaDiscord({ name, email, subject, message, userHeuristics, c
       },
       body: JSON.stringify({
         content: channelType === 'SPAM' ? 
-          `🛡️ **ContentGuard Alert** (Score: ${contentGuardResult.score}/10+, Risk: ${contentGuardResult.riskLevel}, User Risk: ${userHeuristics.riskScore}/10)` :
-          "📬 **New contact form submission!**",
+          `🛡️ **ContentGuard Alert** (Score: ${contentGuardResult.score}/10+, Risk: ${contentGuardResult.riskLevel}, User Risk: ${userHeuristics.riskScore}/10, Session: ${analytics.totalRequests})` :
+          `📬 **New contact form submission!** (Session: ${analytics.totalRequests}, Spam Rate: ${analytics.spamRate})`,
         embeds: [embed],
         username: "Enhanced Anti-Spam Bot"
       })
@@ -556,6 +711,47 @@ async function sendViaDiscord({ name, email, subject, message, userHeuristics, c
     console.error('Full error:', error)
     return false
   }
+}
+
+// ORIGINAL USER AGENT PARSING (FALLBACK)
+function parseUserAgent(userAgent) {
+  if (!userAgent || userAgent === 'unknown') {
+    return { 
+      browser: 'unknown', 
+      os: 'unknown', 
+      device: 'unknown',
+      isBot: true // Unknown UA is suspicious
+    }
+  }
+
+  const ua = userAgent.toLowerCase()
+  
+  // Browser detection
+  let browser = 'unknown'
+  if (ua.includes('chrome') && !ua.includes('edg')) browser = 'chrome'
+  else if (ua.includes('firefox')) browser = 'firefox'
+  else if (ua.includes('safari') && !ua.includes('chrome')) browser = 'safari'
+  else if (ua.includes('edg')) browser = 'edge'
+  else if (ua.includes('opera') || ua.includes('opr')) browser = 'opera'
+
+  // OS detection
+  let os = 'unknown'
+  if (ua.includes('windows')) os = 'windows'
+  else if (ua.includes('mac os x') || ua.includes('macos')) os = 'macos'
+  else if (ua.includes('linux')) os = 'linux'
+  else if (ua.includes('android')) os = 'android'
+  else if (ua.includes('iphone') || ua.includes('ipad')) os = 'ios'
+
+  // Device detection
+  let device = 'desktop'
+  if (ua.includes('mobile') || ua.includes('android')) device = 'mobile'
+  else if (ua.includes('tablet') || ua.includes('ipad')) device = 'tablet'
+
+  // Bot detection
+  const botIndicators = ['bot', 'crawler', 'spider', 'scraper', 'curl', 'wget', 'python', 'php']
+  const isBot = botIndicators.some(indicator => ua.includes(indicator))
+
+  return { browser, os, device, isBot }
 }
 
 // EXISTING EMAIL FALLBACK FUNCTIONS (unchanged)
