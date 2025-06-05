@@ -37,12 +37,25 @@ CURRENT CATEGORIES BEING USED:
 (These will automatically become filter buttons)
 */
 // Usage analytics helper
-const sendUsage = (event, details = {}) => {
+const sendUsage = (event, details = {}, shouldSendBatch = false) => {
   fetch("/api/usage", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ event, details })
+    body: JSON.stringify({ event, details, shouldSendBatch })
   }).catch(err => console.error("Usage send error", err));
+};
+
+// Function to send batched analytics (called after contact form submission)
+const sendBatchedAnalytics = () => {
+  fetch("/api/usage", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ 
+      event: "contact_form_submitted", 
+      details: { source: "portfolio_contact" },
+      shouldSendBatch: true 
+    })
+  }).catch(err => console.error("Batched analytics send error", err));
 };
 
 let viewStartTime = Date.now();
@@ -706,6 +719,9 @@ const handleContactForm = async (e) => {
         subjectLength: data.subject.length,
         messageLength: data.message.length
       })
+      
+      // Send batched analytics after successful contact form submission
+      sendBatchedAnalytics()
       
       // Show success state
       btn.innerHTML = '<span>Message Sent Successfully!</span>'
