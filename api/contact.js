@@ -520,8 +520,8 @@ function isInstantSpam({ name, email, subject, message }) {
 async function sendEmail({ name, email, subject, message, userHeuristics, contentGuardResult, analytics }) {
   
   // Discord Webhook with Enhanced Reporting
-  const mainWebhookUrl = process.env.DISCORD_MAIN_WEBHOOK || null
-  const spamWebhookUrl = process.env.DISCORD_SPAM_WEBHOOK || 'https://discord.com/api/webhooks/1378615327851675769/VOATvHtlI7Aw-3RV6cl7hY9MUIo2bRWuud8zmD4g_fBxMx6cKnmYwtj-NjgbCfSOzYoz'
+  const mainWebhookUrl = process.env.DISCORD_MAIN_WEBHOOK
+  const spamWebhookUrl = process.env.DISCORD_SPAM_WEBHOOK 
   
   if (mainWebhookUrl || spamWebhookUrl) {
     console.log('🚀 Attempting Discord webhook with enhanced reporting...')

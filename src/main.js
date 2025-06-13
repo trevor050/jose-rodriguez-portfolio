@@ -881,7 +881,32 @@ const setupIntersectionObserver = () => {
   
   // Observe new elements
   const animatedElements = document.querySelectorAll('.fade-in-up, .fade-in-left, .fade-in-right, .skills-section, .stats-grid')
-  animatedElements.forEach(el => observer.observe(el))
+  
+  animatedElements.forEach(el => {
+    observer.observe(el)
+    
+    // MOBILE FIX: Check if element is already visible and trigger animation immediately
+    // This fixes the issue where animations don't start on mobile when navigating to About
+    if (isMobile()) {
+      const rect = el.getBoundingClientRect()
+      const isVisible = rect.top < window.innerHeight && rect.bottom > 0
+      
+      if (isVisible) {
+        // Trigger animation immediately for visible elements on mobile
+        setTimeout(() => {
+          el.classList.add('visible')
+          
+          // Trigger specific animations for special sections
+          if (el.classList.contains('skills-section')) {
+            animateSkillBars()
+          }
+          if (el.classList.contains('stats-grid')) {
+            animateCounters()
+          }
+        }, 100) // Small delay to ensure DOM is ready
+      }
+    }
+  })
 }
 
 // Enhanced event listeners
