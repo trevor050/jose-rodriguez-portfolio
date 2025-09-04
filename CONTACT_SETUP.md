@@ -16,10 +16,11 @@
 2. **Backend updated** to use Discord ✅  
 3. **Frontend security** - webhook URL never exposed ✅
 
-**To activate:** Add your webhook URL to Vercel environment variables:
+**To activate:** Add your webhook URL(s) to Vercel environment variables (do not commit real URLs):
 
 ```
-DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/1378611016878788668/ECnSl8eLcAMgVIS_HaUlVfOE-bxHpc3OBqRZL1oNNFO4MZxf5S3sXT7i6p5tQQZu8kut
+DISCORD_MAIN_WEBHOOK=your_main_channel_webhook_url
+DISCORD_SPAM_WEBHOOK=your_spam_channel_webhook_url
 ```
 
 ## Security Features
@@ -69,9 +70,10 @@ Discord webhook is the primary system, but you can still add email services:
 1. Go to [vercel.com/dashboard](https://vercel.com/dashboard)
 2. Select your project  
 3. Go to Settings > Environment Variables
-4. Add the Discord webhook URL:
+4. Add the Discord webhook URL(s):
    ```
-   DISCORD_WEBHOOK_URL=your_webhook_url_here
+   DISCORD_MAIN_WEBHOOK=your_main_channel_webhook_url
+   DISCORD_SPAM_WEBHOOK=your_spam_channel_webhook_url
    ```
 5. Redeploy your site
 
