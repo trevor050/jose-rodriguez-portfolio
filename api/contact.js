@@ -702,8 +702,10 @@ async function sendViaDiscord({ name, email, subject, message, userHeuristics, c
       console.warn('contact: webhook rejected (status ' + status + ')')
       return false
     }
-    // Other errors
-    return false
+      // Other errors
+      const responseText = await response.text();
+      console.warn(`contact: webhook error (status ${status}): ${responseText}`);
+      return false
 
   } catch (error) {
     console.error('contact: discord exception', error?.message || error)

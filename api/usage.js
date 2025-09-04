@@ -40,9 +40,9 @@ export default async function handler(req, res) {
     // Opportunistic cleanup of stale sessions
     {
       const now = Date.now()
-      for (const [sid, sdata] of sessionEvents.entries()) {
-        if (now - (sdata.lastActivity || now) > SESSION_TIMEOUT) sessionEvents.delete(sid)
-      }
+        for (const [sid, sdata] of sessionEvents.entries()) {
+          if (now - (sdata.lastActivity ?? sdata.firstActivity ?? 0) > SESSION_TIMEOUT) sessionEvents.delete(sid)
+        }
     }
 
     // Initialize session if it doesn't exist
