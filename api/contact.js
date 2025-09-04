@@ -1,19 +1,26 @@
 // Vercel Serverless Function for Contact Form
 // ENHANCED USER TRACKING + CONTENTGUARD INTEGRATION + IMPROVED ANALYTICS
+// Ensure ML libraries (used by dependencies) cache to /tmp in serverless
+if (!process.env.TRANSFORMERS_CACHE) process.env.TRANSFORMERS_CACHE = '/tmp/transformers'
+if (!process.env.HF_HOME) process.env.HF_HOME = '/tmp/hf'
+if (!process.env.XDG_CACHE_HOME) process.env.XDG_CACHE_HOME = '/tmp'
+
 import pkg from 'content-guard'
 const { createGuard } = pkg
 import { UAParser } from 'ua-parser-js'
 import geoip from 'geoip-lite'
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 
-// Initialize ContentGuard with balanced variant for good accuracy and reasonable speed
+// Initialize ContentGuard with balanced variant
 const contentGuard = createGuard('balanced', {
-  spamThreshold: 5 // Standard threshold for contact forms
+  spamThreshold: 5,
+  ml: false,
+  enableML: false
 })
 
-console.log('🛡️ ContentGuard Spam Detection System Initialized')
-console.log('  ↳ Variant: Balanced (~0.3ms, 93%+ accuracy)')
-console.log('  ↳ Spam Threshold: 5')
+if (process.env.LOG_LEVEL === 'debug') {
+  console.log('content-guard initialized (balanced, ml disabled)')
+}
 
 // Analytics tracking for usage insights
 const analyticsData = {
@@ -57,7 +64,9 @@ export default async function handler(req, res) {
 
     // STAGE 1: COLLECT COMPREHENSIVE USER HEURISTICS WITH IMPROVED ANALYTICS
     const userHeuristics = await collectUserHeuristics(req)
-    console.log('📊 User heuristics collected:', JSON.stringify(userHeuristics, null, 2))
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.log('heuristics collected')
+    }
 
     // Update analytics with user data
     updateAnalytics(userHeuristics)
@@ -94,9 +103,9 @@ export default async function handler(req, res) {
     }
 
     // STAGE 4: CONTENTGUARD SPAM ANALYSIS
-    console.log('🛡️ Running ContentGuard analysis...')
+    if (process.env.LOG_LEVEL === 'debug') console.log('running ContentGuard analysis...')
     const contentGuardResult = await analyzeWithContentGuard({ name, email, subject, message })
-    console.log('🛡️ ContentGuard Result:', contentGuardResult)
+    if (process.env.LOG_LEVEL === 'debug') console.log('ContentGuard result ready')
 
     // Update spam analytics based on ContentGuard result
     if (contentGuardResult.isSpam) {
@@ -117,21 +126,20 @@ export default async function handler(req, res) {
     })
 
     if (emailSent) {
-      console.log('✅ Enhanced notification process completed.')
-      console.log('📈 Current Analytics Summary:', getAnalyticsSummary())
+      if (process.env.LOG_LEVEL === 'debug') console.log('notification completed')
       return res.status(200).json({
         success: true,
         message: 'Message sent successfully! I\'ll get back to you soon.'
       })
     } else {
-      console.log('❌ All notification methods failed.')
+      console.warn('contact: notifications failed')
       return res.status(500).json({
         error: 'Failed to send message due to an internal issue. Please try LinkedIn.'
       })
     }
 
   } catch (error) {
-    console.error('💥 Contact form main handler error:', error)
+    console.error('contact: handler error', error?.message || error)
     return res.status(500).json({
       error: 'Failed to process message. Please try again or contact via LinkedIn.'
     })
@@ -274,7 +282,7 @@ async function getGeoLocationEnhanced(ip) {
     const geo = geoip.lookup(ip)
     
     if (geo) {
-      console.log(`🌍 Geolocation found for IP ${ip}:`, geo)
+      if (process.env.LOG_LEVEL === 'debug') console.log(`geo ok for ${ip}`)
       return {
         country: geo.country || 'unknown',
         region: geo.region || 'unknown',
@@ -287,7 +295,7 @@ async function getGeoLocationEnhanced(ip) {
         isp: 'unknown' // geoip-lite doesn't provide ISP info
       }
     } else {
-      console.log(`🌍 No geolocation data found for IP: ${ip}`)
+      if (process.env.LOG_LEVEL === 'debug') console.log(`geo miss for ${ip}`)
       return {
         country: 'unknown',
         region: 'unknown',
@@ -425,7 +433,7 @@ function getAnalyticsSummary() {
 
 // CONTENTGUARD INTEGRATION
 async function analyzeWithContentGuard({ name, email, subject, message }) {
-  console.log('🔍 Starting ContentGuard analysis...')
+  if (process.env.LOG_LEVEL === 'debug') console.log('content-guard: start')
   
   try {
     // Analyze the complete content
@@ -438,12 +446,14 @@ async function analyzeWithContentGuard({ name, email, subject, message }) {
     
     const result = await contentGuard.analyze(contentToAnalyze)
     
-    console.log(`🛡️ ContentGuard Analysis Complete:`)
-    console.log(`   ↳ Spam Status: ${result.isSpam ? 'SPAM' : 'CLEAN'}`)
-    console.log(`   ↳ Score: ${result.score}/10+`)
-    console.log(`   ↳ Confidence: ${result.confidence}`)
-    console.log(`   ↳ Risk Level: ${result.riskLevel}`)
-    console.log(`   ↳ Flags: ${result.flags?.length || 0}`)
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.log('content-guard: complete', {
+        isSpam: result.isSpam,
+        score: result.score,
+        risk: result.riskLevel,
+        flags: result.flags?.length || 0
+      })
+    }
     
     return {
       isSpam: result.isSpam,
@@ -458,10 +468,8 @@ async function analyzeWithContentGuard({ name, email, subject, message }) {
     }
     
   } catch (error) {
-    console.error('❌ ContentGuard analysis failed:', error)
-    
-    // Fallback to basic checks if ContentGuard fails
-    console.log('↪️ Falling back to basic spam detection...')
+    console.error('content-guard: error', error?.message || error)
+    // Fallback to basic checks if ContentGuard fails (noisy logs avoided)
     
     const allText = `${name} ${subject} ${message}`.toLowerCase()
     let fallbackScore = 0
@@ -524,7 +532,7 @@ async function sendEmail({ name, email, subject, message, userHeuristics, conten
   const spamWebhookUrl = process.env.DISCORD_SPAM_WEBHOOK 
   
   if (mainWebhookUrl || spamWebhookUrl) {
-    console.log('🚀 Attempting Discord webhook with enhanced reporting...')
+    if (process.env.LOG_LEVEL === 'debug') console.log('attempting Discord webhook...')
     
     // Determine target webhook based on ContentGuard analysis
     let targetWebhookUrl = spamWebhookUrl // Default to spam channel
@@ -537,7 +545,7 @@ async function sendEmail({ name, email, subject, message, userHeuristics, conten
     }
 
     if (targetWebhookUrl) {
-        console.log(`📤 Routing to ${channelType} channel (ContentGuard: ${contentGuardResult.riskLevel})`)
+        if (process.env.LOG_LEVEL === 'debug') console.log(`routing to ${channelType} channel`)
         
         const discordSent = await sendViaDiscord({ 
           name, email, subject, message, 
@@ -545,18 +553,18 @@ async function sendEmail({ name, email, subject, message, userHeuristics, conten
         }, targetWebhookUrl)
         
         if (discordSent) {
-          console.log('✅ Discord notification successful')
+          if (process.env.LOG_LEVEL === 'debug') console.log('discord notification ok')
           return true
         } else {
-          console.log('❌ Discord webhook failed. Attempting email fallbacks...')
+          console.warn('discord webhook failed; trying email fallbacks')
         }
     } else {
-        console.log('🚫 No Discord webhook configured')
+        console.warn('no Discord webhook configured')
     }
   }
   
   // Fallback to email services (keeping the existing fallback chain)
-  console.log('↪️ Discord notification failed or not configured. Attempting email fallbacks...')
+  if (process.env.LOG_LEVEL === 'debug') console.log('Discord not configured or failed; trying email providers...')
 
   if (process.env.SENDGRID_API_KEY) {
     console.log('Attempting SendGrid...')
@@ -577,15 +585,8 @@ async function sendEmail({ name, email, subject, message, userHeuristics, conten
   }
   
   // If all methods fail, log everything for manual follow-up
-  console.log('⚠️ All notification methods failed. Complete data logged for manual outreach.')
-  console.log('📋 Complete contact form submission:')
-  console.log(`Name: ${name}`)
-  console.log(`Email: ${email}`)
-  console.log(`Subject: ${subject}`)
-  console.log(`Message: ${message}`)
-  console.log(`ContentGuard Analysis:`, JSON.stringify(contentGuardResult, null, 2))
-  console.log(`User Heuristics:`, JSON.stringify(userHeuristics, null, 2))
-  console.log(`Timestamp: ${new Date().toISOString()}`)
+  // Avoid logging PII in production
+  console.error('contact: all notification methods failed')
   
   return false
 }
@@ -593,7 +594,7 @@ async function sendEmail({ name, email, subject, message, userHeuristics, conten
 // ENHANCED DISCORD WEBHOOK WITH COMPREHENSIVE REPORTING
 async function sendViaDiscord({ name, email, subject, message, userHeuristics, contentGuardResult, channelType, analytics }, discordWebhookUrl) {
   try {
-    console.log('📤 Preparing enhanced Discord embed message...')
+    if (process.env.LOG_LEVEL === 'debug') console.log('prepare Discord embed...')
     
     // Color based on ContentGuard risk level
     const embedColor = contentGuardResult.riskLevel === 'CRITICAL' ? 0xFF0000 :    // Bright Red
@@ -677,7 +678,7 @@ async function sendViaDiscord({ name, email, subject, message, userHeuristics, c
       timestamp: new Date().toISOString()
     }
 
-    console.log('🌐 Sending to Discord webhook:', discordWebhookUrl.substring(0, 50) + '...')
+    // Never log webhook URLs
 
     const response = await fetch(discordWebhookUrl, {
       method: 'POST',
@@ -693,21 +694,19 @@ async function sendViaDiscord({ name, email, subject, message, userHeuristics, c
       })
     })
 
-    console.log('📡 Discord response status:', response.status)
+    if (process.env.LOG_LEVEL === 'debug') console.log('discord status', response.status)
 
-    if (response.ok) {
-      console.log('✅ Discord notification sent successfully')
-      return true
-    } else {
-      const errorText = await response.text()
-      console.error('❌ Discord webhook failed:', response.status, response.statusText)
-      console.error('Error details:', errorText)
+    if (response.ok) return true
+    const status = response.status
+    if (status === 404 || status === 401 || status === 403) {
+      console.warn('contact: webhook rejected (status ' + status + ')')
       return false
     }
+    // Other errors
+    return false
 
   } catch (error) {
-    console.error('💥 Discord webhook error:', error.message)
-    console.error('Full error:', error)
+    console.error('contact: discord exception', error?.message || error)
     return false
   }
 }

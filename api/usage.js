@@ -1,24 +1,26 @@
-import pkg from 'content-guard';
-const { createGuard } = pkg;
+// Ensure any ML libraries that might be used by dependencies cache to /tmp (writeable on serverless)
+if (!process.env.TRANSFORMERS_CACHE) process.env.TRANSFORMERS_CACHE = '/tmp/transformers'
+if (!process.env.HF_HOME) process.env.HF_HOME = '/tmp/hf'
+if (!process.env.XDG_CACHE_HOME) process.env.XDG_CACHE_HOME = '/tmp'
+
+import pkg from 'content-guard'
+const { createGuard } = pkg
+import crypto from 'node:crypto'
 
 const guard = createGuard('balanced', {
-  spamThreshold: 5 // Lowered threshold for better spam detection
-});
+  spamThreshold: 5,
+  // Attempt to keep dependencies lightweight in serverless
+  ml: false,
+  enableML: false
+})
 
 // In-memory storage for batching events per session
 const sessionEvents = new Map();
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const CLEANUP_INTERVAL = 60 * 1000; // 1 minute
 
-// Cleanup old sessions periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [sessionId, sessionData] of sessionEvents.entries()) {
-    if (now - sessionData.lastActivity > SESSION_TIMEOUT) {
-      sessionEvents.delete(sessionId);
-    }
-  }
-}, CLEANUP_INTERVAL);
+// NOTE: In serverless environments, instances are ephemeral; avoid long-lived timers
+// We'll do opportunistic cleanup on each request instead of setInterval
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -34,6 +36,14 @@ export default async function handler(req, res) {
 
     const heuristics = collectHeuristics(req);
     const sessionId = generateSessionId(heuristics.ip, heuristics.userAgent);
+
+    // Opportunistic cleanup of stale sessions
+    {
+      const now = Date.now()
+      for (const [sid, sdata] of sessionEvents.entries()) {
+        if (now - (sdata.lastActivity || now) > SESSION_TIMEOUT) sessionEvents.delete(sid)
+      }
+    }
 
     // Initialize session if it doesn't exist
     if (!sessionEvents.has(sessionId)) {
@@ -62,19 +72,26 @@ export default async function handler(req, res) {
         timestamp: new Date().toISOString()
       });
 
-      console.log(`📊 Added event "${event}" to session ${sessionId.substring(0, 8)}... (${sessionData.events.length} total events)`);
+      // Minimal log for observability without spamming
+      if (process.env.LOG_LEVEL === 'debug') {
+        console.log(`usage: event=${event} session=${sessionId.substring(0,8)} count=${sessionData.events.length}`)
+      }
     }
 
     // Send batch if requested (usually after contact form submission)
     if (shouldSendBatch || event === 'contact_form_submitted') {
-      console.log(`📤 Sending batched analytics for session ${sessionId.substring(0, 8)}... (${sessionData.events.length} events)`);
+      if (process.env.LOG_LEVEL === 'debug') {
+        console.log(`usage: sending batch session=${sessionId.substring(0,8)} count=${sessionData.events.length}`)
+      }
       
       const sent = await sendBatchedAnalytics(sessionData, sessionId);
       
       if (sent) {
         // Clear events after successful send, but keep session for future events
         sessionData.events = [];
-        console.log(`✅ Batched analytics sent successfully for session ${sessionId.substring(0, 8)}...`);
+        if (process.env.LOG_LEVEL === 'debug') {
+          console.log(`usage: batch ok session=${sessionId.substring(0,8)}`)
+        }
       }
       
       return res.status(200).json({ 
@@ -91,7 +108,7 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error('Usage analytics error:', err);
+    console.error('usage: error', err?.message || err);
     return res.status(500).json({ error: 'Internal error' });
   }
 }
@@ -115,16 +132,19 @@ function collectHeuristics(req) {
 
 function generateSessionId(ip, userAgent) {
   // Create a simple hash-based session ID
-  const crypto = require('crypto');
-  return crypto.createHash('md5').update(`${ip}-${userAgent}-${Date.now()}`).digest('hex').substring(0, 16);
+  return crypto
+    .createHash('md5')
+    .update(`${ip}-${userAgent}-${Date.now()}`)
+    .digest('hex')
+    .substring(0, 16)
 }
 
 async function sendBatchedAnalytics(sessionData, sessionId) {
-  // Always send to spam channel for analytics
-  const webhook = process.env.DISCORD_SPAM_WEBHOOK || 'https://discord.com/api/webhooks/1378615327851675769/VOATvHtlI7Aw-3RV6cl7hY9MUIo2bRWuud8zmD4g_fBxMx6cKnmYwtj-NjgbCfSOzYoz';
+  // Send to spam channel for analytics if configured
+  const webhook = process.env.DISCORD_SPAM_WEBHOOK
 
   if (!webhook) {
-    console.error('❌ No Discord spam webhook configured for analytics');
+    if (process.env.LOG_LEVEL === 'debug') console.log('usage: no spam webhook configured')
     return false;
   }
 
@@ -141,15 +161,18 @@ async function sendBatchedAnalytics(sessionData, sessionId) {
       })
     });
 
-    if (response.ok) {
-      return true;
-    } else {
-      const text = await response.text();
-      console.error('❌ Discord webhook failed:', response.status, text);
-      return false;
+    if (response.ok) return true;
+    // Gracefully handle common webhook failures without noisy logs
+    const status = response.status
+    if (status === 404 || status === 401 || status === 403) {
+      console.warn('usage: webhook rejected (status ' + status + ')')
+      return false
     }
+    const text = await response.text().catch(() => '')
+    console.error('usage: webhook error', status, text?.slice?.(0, 140) || '')
+    return false
   } catch (error) {
-    console.error('❌ Error sending batched analytics:', error);
+    console.error('usage: webhook exception', error?.message || error)
     return false;
   }
 }
